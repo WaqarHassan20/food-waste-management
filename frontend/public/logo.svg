@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="leafGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14b8a6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Circle -->
+  <circle cx="50" cy="50" r="48" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+  
+  <!-- Leaf Icon (Lucide Leaf path adapted) -->
+  <path d="M 25 50 Q 25 25, 50 25 Q 75 25, 75 50 Q 75 62.5, 65 72.5 L 50 87.5 L 35 72.5 Q 25 62.5, 25 50 Z M 50 25 L 50 87.5" 
+        fill="url(#leafGradient)" 
+        stroke="#047857" 
+        stroke-width="2" 
+        stroke-linejoin="round"/>
+</svg>
