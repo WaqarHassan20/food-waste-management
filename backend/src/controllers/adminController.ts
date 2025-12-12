@@ -39,7 +39,7 @@ export const getAllUsers = async (
           isVerified: true,
           isActive: true,
           createdAt: true,
-          restaurant: true,
+          updatedAt: true,
         },
         orderBy: {
           createdAt: 'desc',
@@ -86,7 +86,7 @@ export const getUserById = async (
         isVerified: true,
         isActive: true,
         createdAt: true,
-        restaurant: true,
+        updatedAt: true,
         foodRequests: {
           include: {
             foodListing: true,
@@ -192,17 +192,8 @@ export const verifyRestaurant = async (
       data: { isVerified },
     });
 
-    // Create notification for restaurant owner
-    await prisma.notification.create({
-      data: {
-        userId: restaurant.userId,
-        title: isVerified ? 'Restaurant Verified' : 'Restaurant Unverified',
-        message: isVerified
-          ? 'Your restaurant has been verified and is now visible to users'
-          : 'Your restaurant verification has been revoked',
-        type: 'restaurant_verification',
-      },
-    });
+    // Note: Restaurants have separate authentication and don't use the user notification system
+    // Consider implementing a separate restaurant notification system if needed
 
     return successResponse(
       res,
@@ -220,25 +211,54 @@ export const getDashboardStats = async (
   res: Response
 ): Promise<Response> => {
   try {
+    const now = new Date();
+    const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
     const [
       totalUsers,
       totalRestaurants,
       totalFoodListings,
+      activeFoodListings,
       totalRequests,
       pendingRequests,
       approvedRequests,
+      completedRequests,
+      usersLastWeek,
+      restaurantsLastWeek,
+      requestsLastWeek,
+      listingsLastWeek,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.restaurant.count(),
       prisma.foodListing.count(),
+      prisma.foodListing.count({ where: { status: 'AVAILABLE' } }),
       prisma.foodRequest.count(),
       prisma.foodRequest.count({ where: { status: 'PENDING' } }),
       prisma.foodRequest.count({ where: { status: 'APPROVED' } }),
+      prisma.foodRequest.count({ where: { status: 'COMPLETED' } }),
+      prisma.user.count({ where: { createdAt: { gte: lastWeek } } }),
+      prisma.restaurant.count({ where: { createdAt: { gte: lastWeek } } }),
+      prisma.foodRequest.count({ where: { createdAt: { gte: lastWeek } } }),
+      prisma.foodListing.count({ where: { createdAt: { gte: lastWeek } } }),
     ]);
+
+    // Calculate growth percentages
+    const calculateGrowth = (current: number, recent: number): string => {
+      if (current === 0) return '+0%';
+      const percentage = ((recent / current) * 100).toFixed(1);
+      return `+${percentage}%`;
+    };
 
     const stats = {
       totalUsers,
+      usersGrowth: calculateGrowth(totalUsers, usersLastWeek),
       totalRestaurants,
+      restaurantsGrowth: calculateGrowth(totalRestaurants, restaurantsLastWeek),
+      mealsDonated: completedRequests, // Completed requests = meals donated
+      mealsGrowth: calculateGrowth(completedRequests, requestsLastWeek),
+      activeListings: activeFoodListings,
+      listingsGrowth: calculateGrowth(totalFoodListings, listingsLastWeek),
       totalFoodListings,
       totalRequests,
       pendingRequests,
@@ -315,5 +335,46 @@ export const getAllFoodRequests = async (
   } catch (error) {
     console.error('Get all food requests error:', error);
     return errorResponse(res, 'Failed to fetch food requests', 500, error);
+  }
+};
+
+export const deleteRestaurant = async (
+  req: AuthRequest,
+  res: Response
+): Promise<Response> => {
+  try {
+    const { id } = req.params;
+
+    // Check if restaurant exists
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id },
+    });
+
+    if (!restaurant) {
+      return errorResponse(res, 'Restaurant not found', 404);
+    }
+
+    // Delete all food listings associated with this restaurant
+    // This will cascade delete all related food requests
+    await prisma.$transaction(async (tx) => {
+      // Delete all food listings for this restaurant
+      await tx.foodListing.deleteMany({
+        where: { restaurantId: id },
+      });
+
+      // Delete the restaurant
+      await tx.restaurant.delete({
+        where: { id },
+      });
+    });
+
+    return successResponse(
+      res,
+      null,
+      'Restaurant and all its listings deleted successfully'
+    );
+  } catch (error) {
+    console.error('Delete restaurant error:', error);
+    return errorResponse(res, 'Failed to delete restaurant', 500, error);
   }
 };

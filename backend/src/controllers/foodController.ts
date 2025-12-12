@@ -8,7 +8,17 @@ export const createFoodListing = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const userId = req.user!.userId;
+    const restaurantId = req.user!.restaurantId;
+
+    // Validate that the token is from a restaurant
+    if (!restaurantId || req.user!.type !== 'restaurant') {
+      return errorResponse(
+        res,
+        'Only restaurants can create food listings',
+        403
+      );
+    }
+
     const {
       title,
       description,
@@ -16,34 +26,46 @@ export const createFoodListing = async (
       unit,
       expiryDate,
       pickupTime,
+      imageData,
+      imageMimeType,
       imageUrl,
       category,
     } = req.body;
 
-    // Check if user has a restaurant
+    // Verify restaurant exists
     const restaurant = await prisma.restaurant.findUnique({
-      where: { userId },
+      where: { id: restaurantId },
     });
 
     if (!restaurant) {
-      return errorResponse(
-        res,
-        'You need to create a restaurant profile first',
-        403
-      );
+      return errorResponse(res, 'Restaurant not found', 404);
+    }
+
+    // Convert base64 image to Buffer if provided
+    let imageBuffer: Buffer | undefined;
+    if (imageData) {
+      try {
+        // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
+        const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+        imageBuffer = Buffer.from(base64Data, 'base64');
+      } catch (error) {
+        return errorResponse(res, 'Invalid image data', 400);
+      }
     }
 
     // Create food listing
     const foodListing = await prisma.foodListing.create({
       data: {
-        restaurantId: restaurant.id,
+        restaurantId,
         title,
         description,
         quantity,
         unit,
         expiryDate: new Date(expiryDate),
         pickupTime,
-        imageUrl,
+        imageData: imageBuffer as any, // Buffer is compatible with Prisma Bytes type
+        imageMimeType: imageMimeType || 'image/jpeg',
+        imageUrl: imageUrl || undefined, // Use URL if provided instead of binary
         category,
       },
       include: {
@@ -183,7 +205,17 @@ export const updateFoodListing = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const userId = req.user!.userId;
+    const restaurantId = req.user!.restaurantId;
+
+    // Validate that the token is from a restaurant
+    if (!restaurantId || req.user!.type !== 'restaurant') {
+      return errorResponse(
+        res,
+        'Only restaurants can update food listings',
+        403
+      );
+    }
+
     const { id } = req.params;
     const {
       title,
@@ -197,15 +229,6 @@ export const updateFoodListing = async (
       category,
     } = req.body;
 
-    // Get restaurant
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { userId },
-    });
-
-    if (!restaurant) {
-      return errorResponse(res, 'Restaurant not found', 403);
-    }
-
     // Check if food listing belongs to this restaurant
     const foodListing = await prisma.foodListing.findUnique({
       where: { id },
@@ -215,7 +238,7 @@ export const updateFoodListing = async (
       return errorResponse(res, 'Food listing not found', 404);
     }
 
-    if (foodListing.restaurantId !== restaurant.id) {
+    if (foodListing.restaurantId !== restaurantId) {
       return errorResponse(
         res,
         'You do not have permission to update this listing',
@@ -264,17 +287,18 @@ export const deleteFoodListing = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const userId = req.user!.userId;
-    const { id } = req.params;
+    const restaurantId = req.user!.restaurantId;
 
-    // Get restaurant
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { userId },
-    });
-
-    if (!restaurant) {
-      return errorResponse(res, 'Restaurant not found', 403);
+    // Validate that the token is from a restaurant
+    if (!restaurantId || req.user!.type !== 'restaurant') {
+      return errorResponse(
+        res,
+        'Only restaurants can delete food listings',
+        403
+      );
     }
+
+    const { id } = req.params;
 
     // Check if food listing belongs to this restaurant
     const foodListing = await prisma.foodListing.findUnique({
@@ -285,7 +309,7 @@ export const deleteFoodListing = async (
       return errorResponse(res, 'Food listing not found', 404);
     }
 
-    if (foodListing.restaurantId !== restaurant.id) {
+    if (foodListing.restaurantId !== restaurantId) {
       return errorResponse(
         res,
         'You do not have permission to delete this listing',
@@ -310,19 +334,20 @@ export const getMyFoodListings = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const userId = req.user!.userId;
+    const restaurantId = req.user!.restaurantId;
 
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { userId },
-    });
-
-    if (!restaurant) {
-      return errorResponse(res, 'Restaurant not found', 404);
+    // Validate that the token is from a restaurant
+    if (!restaurantId || req.user!.type !== 'restaurant') {
+      return errorResponse(
+        res,
+        'Only restaurants can view their food listings',
+        403
+      );
     }
 
     const foodListings = await prisma.foodListing.findMany({
       where: {
-        restaurantId: restaurant.id,
+        restaurantId,
       },
       orderBy: {
         createdAt: 'desc',
@@ -333,5 +358,35 @@ export const getMyFoodListings = async (
   } catch (error) {
     console.error('Get my food listings error:', error);
     return errorResponse(res, 'Failed to fetch food listings', 500, error);
+  }
+};
+
+// Get food listing image
+export const getFoodImage = async (
+  req: AuthRequest,
+  res: Response
+): Promise<any> => {
+  try {
+    const { id } = req.params;
+
+    const foodListing = await prisma.foodListing.findUnique({
+      where: { id },
+      select: {
+        imageData: true,
+        imageMimeType: true,
+      },
+    });
+
+    if (!foodListing || !foodListing.imageData) {
+      return errorResponse(res, 'Image not found', 404);
+    }
+
+    // Set content type and send image
+    res.setHeader('Content-Type', foodListing.imageMimeType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+    return res.send(foodListing.imageData);
+  } catch (error) {
+    console.error('Get food image error:', error);
+    return errorResponse(res, 'Failed to fetch image', 500, error);
   }
 };

@@ -18,7 +18,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5173',
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -38,6 +45,15 @@ app.use('/api/v1/food', foodRouter);
 app.use('/api/v1/requests', requestRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/notifications', notificationRouter);
+
+// Debug: List all registered routes
+console.log('\n=== Registered Auth Routes ===');
+authRouter.stack.forEach((r: any) => {
+  if (r.route) {
+    console.log(`${Object.keys(r.route.methods).join(', ').toUpperCase()} /api/v1/auth${r.route.path}`);
+  }
+});
+console.log('===========================\n');
 
 // Error handling
 app.use(notFound);
