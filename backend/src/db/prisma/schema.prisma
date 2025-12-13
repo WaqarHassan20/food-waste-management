@@ -37,6 +37,18 @@ enum RequestStatus {
   CANCELLED
 }
 
+enum FoodCategory {
+  PREPARED_FOOD
+  RAW_INGREDIENTS
+  BAKERY
+  DAIRY
+  FRUITS_VEGETABLES
+  BEVERAGES
+  PACKAGED_FOOD
+  FROZEN_FOOD
+  OTHER
+}
+
 model User {
   id         String   @id @default(uuid())
   email      String   @unique
@@ -81,7 +93,7 @@ model Restaurant {
 }
 
 model FoodListing {
-  id            String     @id @default(uuid())
+  id            String       @id @default(uuid())
   restaurantId  String
   title         String
   description   String
@@ -89,13 +101,13 @@ model FoodListing {
   unit          String // kg, plates, servings, etc
   expiryDate    DateTime
   pickupTime    String // e.g., "5:00 PM - 8:00 PM"
-  status        FoodStatus @default(AVAILABLE)
+  status        FoodStatus   @default(AVAILABLE)
   imageData     Bytes? // Binary image data stored in PostgreSQL BYTEA
   imageMimeType String? // e.g., "image/jpeg", "image/png"
   imageUrl      String? // Alternative to binary storage - URL to image
-  category      String? // prepared food, raw ingredients, bakery, etc
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  category      FoodCategory @default(OTHER)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   // Relations
   restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)

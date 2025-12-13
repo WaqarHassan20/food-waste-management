@@ -1,6 +1,32 @@
 export type UserRole = 'USER' | 'RESTAURANT' | 'ADMIN';
 export type FoodStatus = 'AVAILABLE' | 'RESERVED' | 'CLAIMED' | 'EXPIRED';
 export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
+export type FoodCategory =
+  | 'PREPARED_FOOD'
+  | 'RAW_INGREDIENTS'
+  | 'BAKERY'
+  | 'DAIRY'
+  | 'FRUITS_VEGETABLES'
+  | 'BEVERAGES'
+  | 'PACKAGED_FOOD'
+  | 'FROZEN_FOOD'
+  | 'OTHER';
+
+// Helper function to get human-readable category names
+export const getCategoryLabel = (category: FoodCategory): string => {
+  const labels: Record<FoodCategory, string> = {
+    PREPARED_FOOD: 'Prepared Food',
+    RAW_INGREDIENTS: 'Raw Ingredients',
+    BAKERY: 'Bakery Items',
+    DAIRY: 'Dairy Products',
+    FRUITS_VEGETABLES: 'Fruits & Vegetables',
+    BEVERAGES: 'Beverages',
+    PACKAGED_FOOD: 'Packaged Food',
+    FROZEN_FOOD: 'Frozen Food',
+    OTHER: 'Other',
+  };
+  return labels[category] || category;
+};
 
 export interface User {
   id: string;
@@ -52,7 +78,7 @@ export interface FoodListing {
   imageData?: any; // Binary data indicating image exists
   imageMimeType?: string;
   imageUrl?: string; // URL to external image
-  category?: string;
+  category: FoodCategory;
   createdAt: string;
   updatedAt: string;
   restaurant?: {

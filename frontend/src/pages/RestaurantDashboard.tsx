@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge, Modal, Input, ToastContainer, ConfirmDialog } from '../components/ui';
 import { BarChart3, Package, Clock, Plus, CheckCircle, XCircle } from 'lucide-react';
 import { foodAPI, requestAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
+import { getCategoryLabel, type FoodCategory } from '../types';
 
 interface RestaurantDashboardProps {
   restaurantName: string;
 }
 
 export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restaurantName }) => {
-  const [activeTab, setActiveTab] = useState<'stats' | 'listings' | 'requests'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'listings' | 'requests' | 'history'>('stats');
   const [showNewListingModal, setShowNewListingModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,21 +31,97 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
     unit: 'pieces',
     expiryDate: '',
     pickupTime: '',
-    category: 'prepared-food',
+    category: 'PREPARED_FOOD',
     imageData: '',
     imageMimeType: '',
     imageUrl: '',
-  }); const [myListings, setMyListings] = useState<any[]>([]);
+  });
+
+  const [myListings, setMyListings] = useState<any[]>([]);
+  const [filteredListings, setFilteredListings] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [completedListings, setCompletedListings] = useState<any[]>([]);
+  const [filteredCompletedListings, setFilteredCompletedListings] = useState<any[]>([]);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
+  // Calculate dynamic stats based on actual data
+  const allListings = [...myListings, ...completedListings];
   const stats = {
     totalListings: myListings.length,
-    activeDonations: myListings.filter(l => l.status === 'AVAILABLE').length,
-    completedDonations: 45,
-    totalImpact: '320 meals saved',
-    thisMonth: 28,
-    thisWeek: 7,
+    activeDonations: myListings.filter(l => l.status === 'AVAILABLE' || l.status === 'RESERVED').length,
+    completedDonations: completedListings.length,
+    totalImpactItems: allListings.reduce((sum, l) => sum + (l.quantity || 0), 0),
+    totalImpact: `${allListings.reduce((sum, l) => sum + (l.quantity || 0), 0)} items saved`,
+    thisMonthListings: allListings.filter(l => {
+      const createdDate = new Date(l.createdAt);
+      const now = new Date();
+      const isThisMonth = createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
+      if (myListings.indexOf(l) === 0) {
+        console.log('🗓️ This Month Check:', {
+          createdDate: createdDate.toISOString(),
+          now: now.toISOString(),
+          createdMonth: createdDate.getMonth(),
+          currentMonth: now.getMonth(),
+          isThisMonth
+        });
+      }
+      return isThisMonth;
+    }),
+    thisMonth: allListings.filter(l => {
+      const createdDate = new Date(l.createdAt);
+      const now = new Date();
+      return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
+    }).length,
+    thisWeekListings: allListings.filter(l => {
+      const createdDate = new Date(l.createdAt);
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const isThisWeek = createdDate >= oneWeekAgo;
+      if (myListings.indexOf(l) === 0) {
+        console.log('📅 This Week Check:', {
+          createdDate: createdDate.toISOString(),
+          oneWeekAgo: oneWeekAgo.toISOString(),
+          now: new Date().toISOString(),
+          isThisWeek
+        });
+      }
+      return isThisWeek;
+    }),
+    thisWeek: allListings.filter(l => {
+      const createdDate = new Date(l.createdAt);
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      return createdDate >= oneWeekAgo;
+    }).length,
   };
+
+  // Calculate impact quantities for each period
+  const thisWeekImpact = stats.thisWeekListings.reduce((sum, l) => sum + (l.quantity || 0), 0);
+  const thisMonthImpact = stats.thisMonthListings.reduce((sum, l) => sum + (l.quantity || 0), 0);
+  const allTimeImpact = stats.totalImpactItems;
+
+  // Calculate percentages for progress bars (relative to max)
+  const maxImpact = Math.max(thisWeekImpact, thisMonthImpact, allTimeImpact, 1); // Avoid division by zero
+  const weekPercentage = (thisWeekImpact / maxImpact) * 100;
+  const monthPercentage = (thisMonthImpact / maxImpact) * 100;
+  const allTimePercentage = (allTimeImpact / maxImpact) * 100;
+
+  // Load data on mount
+  useEffect(() => {
+    loadMyListings();
+    loadPendingRequests();
+  }, []);
+
+  // Filter listings by category
+  useEffect(() => {
+    if (selectedCategory === 'ALL') {
+      setFilteredListings(myListings);
+      setFilteredCompletedListings(completedListings);
+    } else {
+      setFilteredListings(myListings.filter(l => l.category === selectedCategory));
+      setFilteredCompletedListings(completedListings.filter(l => l.category === selectedCategory));
+    }
+  }, [selectedCategory, myListings, completedListings]);
 
   // Handle create/update listing
   const handleSaveListing = async () => {
@@ -95,7 +172,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
         unit: 'pieces',
         expiryDate: '',
         pickupTime: '',
-        category: 'prepared-food',
+        category: 'PREPARED_FOOD',
         imageData: '',
         imageMimeType: '',
         imageUrl: '',
@@ -156,7 +233,18 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
       const response = await foodAPI.getMyListings();
       // Axios interceptor already extracts response.data
       // Backend returns { success, message, data: [...] }
-      setMyListings(response.data || response || []);
+      const listings = response.data || response || [];
+
+      // Separate active and completed listings
+      const active = listings.filter((l: any) =>
+        l.status === 'AVAILABLE' || l.status === 'RESERVED'
+      );
+      const completed = listings.filter((l: any) =>
+        l.status === 'CLAIMED' || l.status === 'EXPIRED'
+      );
+
+      setMyListings(active);
+      setCompletedListings(completed);
     } catch (err: any) {
       console.error('Error loading listings:', err);
     }
@@ -165,20 +253,22 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
   // Load pending requests
   const loadPendingRequests = async () => {
     try {
-      const response = await requestAPI.getRestaurantRequests('PENDING');
+      // Get both PENDING and APPROVED requests
+      const response = await requestAPI.getRestaurantRequests();
       // Axios interceptor already extracts response.data
       // Backend returns { success, message, data: [...] }
-      setPendingRequests(response.data || response || []);
+      const allRequests = response.data || response || [];
+      // Filter to show only PENDING and APPROVED (ready for pickup)
+      const activeRequests = allRequests.filter(
+        (r: any) => r.status === 'PENDING' || r.status === 'APPROVED'
+      );
+      setPendingRequests(activeRequests);
     } catch (err: any) {
       console.error('Error loading requests:', err);
     }
   };
 
-  // Handle delete listing
-  const handleDeleteListing = async (id: string) => {
-    setDeleteDialog({ isOpen: true, listingId: id });
-  };
-
+  // Confirm delete listing
   const confirmDeleteListing = async () => {
     setIsLoading(true);
     try {
@@ -215,6 +305,20 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
       await loadPendingRequests();
     } catch (err: any) {
       toast.error(err.message || 'Failed to reject request');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle complete request (mark as picked up)
+  const handleCompleteRequest = async (id: string) => {
+    setIsLoading(true);
+    try {
+      await requestAPI.updateRequestStatus(id, 'COMPLETED');
+      toast.success('Request marked as completed!');
+      await loadPendingRequests();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to complete request');
     } finally {
       setIsLoading(false);
     }
@@ -269,6 +373,16 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
             <Clock size={20} />
             <span>Requests ({pendingRequests.length})</span>
           </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`flex-1 min-w-max py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'history'
+              ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
+              : 'text-gray-600 hover:bg-gray-100'
+              }`}
+          >
+            <CheckCircle size={20} />
+            <span>History</span>
+          </button>
         </div>
 
         {/* Stats Tab */}
@@ -276,27 +390,29 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Card>
-                <div className="p-6 text-center hover:shadow-xl transition-shadow">
-                  <div className="text-3xl font-bold text-gray-900">{stats.activeDonations}</div>
-                  <div className="text-gray-600">Active Listings</div>
+                <div className="p-6 text-center hover:shadow-xl transition-all transform hover:scale-105 duration-300">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">{stats.activeDonations}</div>
+                  <div className="text-gray-600 text-sm">Active Listings</div>
                 </div>
               </Card>
               <Card>
-                <div className="p-6 text-center hover:shadow-xl transition-shadow">
-                  <div className="text-3xl font-bold text-gray-900">{stats.completedDonations}</div>
-                  <div className="text-gray-600">Completed</div>
+                <div className="p-6 text-center hover:shadow-xl transition-all transform hover:scale-105 duration-300">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">{stats.completedDonations}</div>
+                  <div className="text-gray-600 text-sm">Completed</div>
                 </div>
               </Card>
               <Card>
-                <div className="p-6 text-center hover:shadow-xl transition-shadow">
-                  <div className="text-3xl font-bold text-gray-900">{stats.thisMonth}</div>
-                  <div className="text-gray-600">This Month</div>
+                <div className="p-6 text-center hover:shadow-xl transition-all transform hover:scale-105 duration-300">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">{stats.thisMonth}</div>
+                  <div className="text-gray-600 text-sm">This Month</div>
                 </div>
               </Card>
               <Card>
-                <div className="p-6 text-center hover:shadow-xl transition-shadow">
-                  <div className="text-2xl font-bold text-emerald-600">{stats.totalImpact}</div>
-                  <div className="text-gray-600">Total Impact</div>
+                <div className="p-6 text-center hover:shadow-xl transition-all transform hover:scale-105 duration-300 bg-linear-to-br from-emerald-50 to-teal-50">
+                  <div className="text-2xl font-bold text-emerald-600 mb-1">
+                    {stats.totalImpactItems} {stats.totalImpactItems === 1 ? 'item' : 'items'}
+                  </div>
+                  <div className="text-gray-600 text-sm font-medium">Total Impact</div>
                 </div>
               </Card>
             </div>
@@ -306,33 +422,72 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
               <div className="p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">Impact Overview</h3>
                 <div className="space-y-6">
-                  <div>
+                  {/* This Week */}
+                  <div className="group">
                     <div className="flex justify-between mb-2">
                       <span className="text-gray-700 font-semibold">This Week</span>
-                      <span className="text-emerald-600 font-bold">{stats.thisWeek} meals</span>
+                      <span className="text-emerald-600 font-bold transition-transform group-hover:scale-110">
+                        {thisWeekImpact} {thisWeekImpact === 1 ? 'item' : 'items'}
+                      </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-4">
-                      <div className="bg-linear-to-r from-emerald-500 to-teal-500 h-4 rounded-full" style={{ width: '35%' }}></div>
+                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                      <div
+                        className="bg-linear-to-r from-emerald-500 via-emerald-400 to-teal-500 h-4 rounded-full transition-all duration-1000 ease-out shadow-md relative overflow-hidden"
+                        style={{ width: `${weekPercentage === 0 ? 0 : Math.max(weekPercentage, 2)}%` }}
+                      >
+                        {weekPercentage > 0 && (
+                          <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div>
+
+                  {/* This Month */}
+                  <div className="group">
                     <div className="flex justify-between mb-2">
                       <span className="text-gray-700 font-semibold">This Month</span>
-                      <span className="text-teal-600 font-bold">{stats.thisMonth} meals</span>
+                      <span className="text-teal-600 font-bold transition-transform group-hover:scale-110">
+                        {thisMonthImpact} {thisMonthImpact === 1 ? 'item' : 'items'}
+                      </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-4">
-                      <div className="bg-linear-to-r from-teal-500 to-cyan-500 h-4 rounded-full" style={{ width: '60%' }}></div>
+                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                      <div
+                        className="bg-linear-to-r from-teal-500 via-teal-400 to-cyan-500 h-4 rounded-full transition-all duration-1000 ease-out shadow-md relative overflow-hidden"
+                        style={{ width: `${monthPercentage === 0 ? 0 : Math.max(monthPercentage, 2)}%` }}
+                      >
+                        {monthPercentage > 0 && (
+                          <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div>
+
+                  {/* All Time */}
+                  <div className="group">
                     <div className="flex justify-between mb-2">
                       <span className="text-gray-700 font-semibold">All Time</span>
-                      <span className="text-cyan-600 font-bold">{stats.totalImpact}</span>
+                      <span className="text-cyan-600 font-bold transition-transform group-hover:scale-110">
+                        {allTimeImpact} {allTimeImpact === 1 ? 'item' : 'items'}
+                      </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-4">
-                      <div className="bg-linear-to-r from-cyan-500 to-blue-500 h-4 rounded-full" style={{ width: '90%' }}></div>
+                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                      <div
+                        className="bg-linear-to-r from-cyan-500 via-blue-400 to-blue-500 h-4 rounded-full transition-all duration-1000 ease-out shadow-md relative overflow-hidden"
+                        style={{ width: `${allTimePercentage === 0 ? 0 : Math.max(allTimePercentage, 2)}%` }}
+                      >
+                        {allTimePercentage > 0 && (
+                          <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Empty State */}
+                  {allTimeImpact === 0 && (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                      <p className="text-gray-500 text-sm">Start creating listings to see your impact!</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
@@ -341,106 +496,531 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
 
         {/* Listings Tab */}
         {activeTab === 'listings' && (
-          <div className="space-y-4">
-            {myListings.map((listing) => (
-              <Card key={listing.id}>
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">{listing.title}</h3>
-                      <p className="text-gray-600">Quantity: {listing.quantity} {listing.unit}</p>
-                      {listing.description && <p className="text-gray-600 text-sm">{listing.description}</p>}
+          <>
+            {/* Category Filter */}
+            <div className="mb-6 bg-white p-4 rounded-2xl shadow-md">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-gray-700 mr-2">Filter by Category:</span>
+                <button
+                  onClick={() => setSelectedCategory('ALL')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'ALL'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('PREPARED_FOOD')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'PREPARED_FOOD'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Prepared Food
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('RAW_INGREDIENTS')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'RAW_INGREDIENTS'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Raw Ingredients
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('BAKERY')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'BAKERY'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Bakery
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('DAIRY')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'DAIRY'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Dairy
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('FRUITS_VEGETABLES')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'FRUITS_VEGETABLES'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Fruits & Vegetables
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('BEVERAGES')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'BEVERAGES'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Beverages
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('PACKAGED_FOOD')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'PACKAGED_FOOD'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Packaged Food
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('FROZEN_FOOD')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'FROZEN_FOOD'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Frozen Food
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('OTHER')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'OTHER'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Other
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredListings.map((listing) => (
+                <Card key={listing.id} className="overflow-hidden hover:shadow-xl transition-shadow">
+                  {/* Image Section */}
+                  <div className="relative h-48 bg-linear-to-br from-emerald-100 to-teal-100">
+                    {listing.imageUrl || listing.imageData ? (
+                      <img
+                        src={listing.imageUrl || `data:${listing.imageMimeType || 'image/jpeg'};base64,${listing.imageData}`}
+                        alt={listing.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package size={64} className="text-emerald-300" />
+                      </div>
+                    )}
+                    {/* Status Badge Overlay */}
+                    <div className="absolute top-3 right-3">
+                      <Badge
+                        variant={
+                          listing.status === 'AVAILABLE'
+                            ? 'success'
+                            : listing.status === 'RESERVED'
+                              ? 'warning'
+                              : 'default'
+                        }
+                        className="shadow-lg"
+                      >
+                        {listing.status}
+                      </Badge>
                     </div>
-                    <Badge
-                      variant={
-                        listing.status === 'AVAILABLE'
-                          ? 'success'
-                          : listing.status === 'RESERVED'
-                            ? 'warning'
-                            : 'default'
+                    {/* Category Badge */}
+                    {listing.category && (
+                      <div className="absolute top-3 left-3">
+                        <Badge variant="default" className="bg-white/90 text-gray-800 shadow-lg text-xs">
+                          {getCategoryLabel(listing.category)}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="p-5">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
+                      {listing.title}
+                    </h3>
+
+                    {listing.description && (
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                        {listing.description}
+                      </p>
+                    )}
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Package size={16} className="mr-2 text-emerald-600" />
+                        <span className="font-semibold">Quantity:</span>
+                        <span className="ml-1">{listing.quantity} {listing.unit}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Clock size={16} className="mr-2 text-emerald-600" />
+                        <span className="font-semibold">Pickup:</span>
+                        <span className="ml-1">{listing.pickupTime}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-700">
+                        <span className="mr-2">📅</span>
+                        <span className="font-semibold">Expires:</span>
+                        <span className="ml-1">{new Date(listing.expiryDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-4 border-t border-gray-200">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setEditingId(listing.id);
+                          setFormData({
+                            title: listing.title,
+                            description: listing.description,
+                            quantity: listing.quantity.toString(),
+                            unit: listing.unit,
+                            expiryDate: listing.expiryDate,
+                            pickupTime: listing.pickupTime,
+                            category: listing.category || 'PREPARED_FOOD',
+                            imageData: '',
+                            imageMimeType: '',
+                            imageUrl: listing.imageUrl || '',
+                          });
+                          setShowNewListingModal(true);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex-1 hover:bg-red-500/20 hover:text-red-600 hover:border-red-300 transition-all"
+                        onClick={() => setDeleteDialog({ isOpen: true, listingId: listing.id })}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              {filteredListings.length === 0 && (
+                <div className="col-span-full text-center py-16">
+                  <Package size={64} className="mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-600 text-lg mb-4">
+                    {selectedCategory === 'ALL'
+                      ? 'No listings yet'
+                      : `No ${getCategoryLabel(selectedCategory as FoodCategory)} listings found`}
+                  </p>
+                  <Button onClick={() => setShowNewListingModal(true)}>
+                    <Plus size={20} className="mr-2" />
+                    Create Your First Listing
+                  </Button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Requests Tab */}
+        {activeTab === 'requests' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pendingRequests.map((request) => (
+              <Card key={request.id} className="overflow-hidden hover:shadow-xl transition-shadow">
+                {/* Image Section */}
+                <div className="relative h-48 bg-linear-to-br from-emerald-100 to-teal-100">
+                  {request.foodListing?.imageUrl || request.foodListing?.imageData ? (
+                    <img
+                      src={
+                        request.foodListing.imageUrl ||
+                        `data:${request.foodListing.imageMimeType || 'image/jpeg'};base64,${request.foodListing.imageData}`
                       }
+                      alt={request.foodListing?.title || 'Food Item'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package size={64} className="text-emerald-300" />
+                    </div>
+                  )}
+                  {/* Status Badge Overlay */}
+                  <div className="absolute top-3 right-3">
+                    <Badge
+                      variant={request.status === 'APPROVED' ? 'success' : 'warning'}
+                      className="shadow-lg"
                     >
-                      {listing.status}
+                      {request.status}
                     </Badge>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm text-gray-700">
-                      <span className="font-semibold">Expires:</span> {new Date(listing.expiryDate).toLocaleString()}
-                      <span className="ml-4 font-semibold">Pickup:</span> {listing.pickupTime}
+                  {/* Category Badge */}
+                  {request.foodListing?.category && (
+                    <div className="absolute top-3 left-3">
+                      <Badge variant="default" className="bg-white/90 text-gray-800 shadow-lg text-xs">
+                        {getCategoryLabel(request.foodListing.category)}
+                      </Badge>
                     </div>
-                    <div className="space-x-2">
-                      <Button variant="outline" onClick={() => {
-                        setEditingId(listing.id);
-                        setFormData({
-                          title: listing.title,
-                          description: listing.description,
-                          quantity: listing.quantity.toString(),
-                          unit: listing.unit,
-                          expiryDate: listing.expiryDate,
-                          pickupTime: listing.pickupTime,
-                          category: listing.category || 'prepared-food',
-                          imageData: '',
-                          imageMimeType: '',
-                          imageUrl: listing.imageUrl || '',
-                        });
-                        setShowNewListingModal(true);
-                      }}>Edit</Button>
-                      <Button className="hover:bg-red-500/20 hover:text-red-600 hover:border-red-300 transition-all" variant="ghost" onClick={() => handleDeleteListing(listing.id)}>Delete</Button>
+                  )}
+                </div>
+
+                {/* Content Section */}
+                <div className="p-5">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
+                    {request.foodListing?.title || 'Food Item'}
+                  </h3>
+
+                  {/* Requested by Info */}
+                  <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <p className="text-sm font-semibold text-blue-900 mb-1">
+                      👤 Requested by: {request.user?.name || 'Unknown'}
+                    </p>
+                    {request.user?.phone && (
+                      <p className="text-xs text-blue-700">📞 {request.user.phone}</p>
+                    )}
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Package size={16} className="mr-2 shrink-0 text-emerald-600" />
+                      <span className="font-semibold mr-1">Quantity:</span>
+                      <span>{request.quantity}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Clock size={16} className="mr-2 shrink-0 text-emerald-600" />
+                      <span className="font-semibold mr-1">Requested:</span>
+                      <span>{new Date(request.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
+
+                  {/* Action Buttons */}
+                  {request.status === 'PENDING' && (
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        className="w-full"
+                        onClick={() => handleApproveRequest(request.id)}
+                        disabled={isLoading}
+                      >
+                        <CheckCircle size={18} className="mr-2" />
+                        Approve Request
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full hover:bg-red-500/20 hover:text-red-600 hover:border-red-300 transition-all"
+                        onClick={() => handleRejectRequest(request.id)}
+                        disabled={isLoading}
+                      >
+                        <XCircle size={18} className="mr-2" />
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+
+                  {request.status === 'APPROVED' && (
+                    <div className="space-y-2">
+                      <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-3 text-center">
+                        <p className="text-emerald-700 font-semibold text-sm">
+                          ✓ Approved - Waiting for pickup
+                        </p>
+                      </div>
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        onClick={() => handleCompleteRequest(request.id)}
+                        disabled={isLoading}
+                      >
+                        <CheckCircle size={18} className="mr-2" />
+                        Mark as Picked Up
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </Card>
             ))}
-            {myListings.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-600">No listings yet. Create one to get started!</p>
+            {pendingRequests.length === 0 && (
+              <div className="col-span-full text-center py-16">
+                <Package size={64} className="mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-600 text-lg">No pending or approved requests</p>
               </div>
             )}
           </div>
         )}
 
-        {/* Requests Tab */}
-        {activeTab === 'requests' && (
-          <div className="space-y-4">
-            {pendingRequests.map((request) => (
-              <Card key={request.id}>
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">{request.foodListing?.title || 'Food Item'}</h3>
-                      <p className="text-gray-600">Requested by: {request.user?.name || 'Unknown'}</p>
-                      <p className="text-sm text-gray-500">Quantity: {request.quantity} • {new Date(request.createdAt).toLocaleDateString()}</p>
-                    </div>
-                    <Badge variant="warning">{request.status}</Badge>
-                  </div>
-                  <div className="flex space-x-3">
-                    <Button
-                      className="flex-1"
-                      onClick={() => handleApproveRequest(request.id)}
-                      disabled={isLoading}
-                    >
-                      <CheckCircle size={18} className="mr-2" />
-                      Approve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 hover:bg-red-500/20 hover:text-red-600 hover:border-red-300 transition-all"
-                      onClick={() => handleRejectRequest(request.id)}
-                      disabled={isLoading}
-                    >
-                      <XCircle size={18} className="mr-2" />
-                      Reject
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-            {pendingRequests.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-600">No pending requests</p>
+        {/* History Tab */}
+        {activeTab === 'history' && (
+          <>
+            {/* Category Filter */}
+            <div className="mb-6 bg-white p-4 rounded-2xl shadow-md">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-gray-700 mr-2">Filter by Category:</span>
+                <button
+                  onClick={() => setSelectedCategory('ALL')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'ALL'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('PREPARED_FOOD')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'PREPARED_FOOD'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Prepared Food
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('RAW_INGREDIENTS')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'RAW_INGREDIENTS'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Raw Ingredients
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('BAKERY')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'BAKERY'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Bakery
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('DAIRY')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'DAIRY'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Dairy
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('FRUITS_VEGETABLES')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'FRUITS_VEGETABLES'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Fruits & Vegetables
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('BEVERAGES')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'BEVERAGES'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Beverages
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('PACKAGED_FOOD')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'PACKAGED_FOOD'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Packaged Food
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('FROZEN_FOOD')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'FROZEN_FOOD'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Frozen Food
+                </button>
+                <button
+                  onClick={() => setSelectedCategory('OTHER')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'OTHER'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  Other
+                </button>
               </div>
-            )}
-          </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCompletedListings.map((listing) => (
+                <Card key={listing.id} className="overflow-hidden hover:shadow-xl transition-shadow">
+                  {/* Image Section */}
+                  <div className="relative h-48 bg-linear-to-br from-gray-100 to-gray-200">
+                    {listing.imageUrl || listing.imageData ? (
+                      <img
+                        src={listing.imageUrl || `data:${listing.imageMimeType || 'image/jpeg'};base64,${listing.imageData}`}
+                        alt={listing.title}
+                        className="w-full h-full object-cover opacity-75"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package size={64} className="text-gray-300" />
+                      </div>
+                    )}
+                    {/* Status Badge Overlay */}
+                    <div className="absolute top-3 right-3">
+                      <Badge variant="default" className="shadow-lg bg-gray-600">
+                        {listing.status}
+                      </Badge>
+                    </div>
+                    {/* Category Badge */}
+                    {listing.category && (
+                      <div className="absolute top-3 left-3">
+                        <Badge variant="default" className="bg-white/90 text-gray-800 shadow-lg text-xs">
+                          {getCategoryLabel(listing.category)}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="p-5 bg-gray-50">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
+                      {listing.title}
+                    </h3>
+
+                    {listing.description && (
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                        {listing.description}
+                      </p>
+                    )}
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Package size={16} className="mr-2 text-gray-500 shrink-0" />
+                        <span className="font-semibold">Quantity:</span>
+                        <span className="ml-1">{listing.quantity} {listing.unit}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Clock size={16} className="mr-2 text-gray-500 shrink-0" />
+                        <span className="font-semibold">Pickup Time:</span>
+                        <span className="ml-1">{listing.pickupTime}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-700">
+                        <span className="mr-2">📅</span>
+                        <span className="font-semibold">Created:</span>
+                        <span className="ml-1">{new Date(listing.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-emerald-600 font-semibold">
+                        <CheckCircle size={16} className="mr-2 shrink-0" />
+                        <span>Completed</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              {filteredCompletedListings.length === 0 && (
+                <div className="col-span-full text-center py-16">
+                  <CheckCircle size={64} className="mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-600 text-lg mb-2">
+                    {selectedCategory === 'ALL'
+                      ? 'No completed donations yet'
+                      : `No completed ${getCategoryLabel(selectedCategory as FoodCategory)} donations found`}
+                  </p>
+                  <p className="text-sm text-gray-500">Completed food donations will appear here</p>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* New/Edit Listing Modal */}
@@ -455,7 +1035,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
             unit: 'pieces',
             expiryDate: '',
             pickupTime: '',
-            category: 'prepared-food',
+            category: 'PREPARED_FOOD',
             imageData: '',
             imageMimeType: '',
             imageUrl: '',
@@ -522,12 +1102,23 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
-                <Input
-                  type="text"
-                  placeholder="e.g., prepared-food, raw-ingredients, bakery..."
+                <select
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                />
+                  required
+                >
+                  <option value="">Select a category</option>
+                  <option value="PREPARED_FOOD">Prepared Food</option>
+                  <option value="RAW_INGREDIENTS">Raw Ingredients</option>
+                  <option value="BAKERY">Bakery Items</option>
+                  <option value="DAIRY">Dairy Products</option>
+                  <option value="FRUITS_VEGETABLES">Fruits & Vegetables</option>
+                  <option value="BEVERAGES">Beverages</option>
+                  <option value="PACKAGED_FOOD">Packaged Food</option>
+                  <option value="FROZEN_FOOD">Frozen Food</option>
+                  <option value="OTHER">Other</option>
+                </select>
               </div>
 
               <div>
@@ -554,8 +1145,8 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
                       setFormData(prev => ({ ...prev, imageUrl: '' }));
                     }}
                     className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${imageUploadType === 'upload'
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                   >
                     Upload Image
@@ -568,8 +1159,8 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
                       setFormData(prev => ({ ...prev, imageData: '', imageMimeType: '' }));
                     }}
                     className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${imageUploadType === 'url'
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                   >
                     Image URL
@@ -658,7 +1249,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
                     unit: 'pieces',
                     expiryDate: '',
                     pickupTime: '',
-                    category: 'prepared-food',
+                    category: 'PREPARED_FOOD',
                     imageData: '',
                     imageMimeType: '',
                     imageUrl: '',
@@ -692,6 +1283,15 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
           cancelText="Cancel"
           type="danger"
         />
+
+        {/* Floating Action Button for Mobile */}
+        <button
+          onClick={() => setShowNewListingModal(true)}
+          className="md:hidden fixed bottom-6 right-6 bg-linear-to-r from-emerald-600 to-teal-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all z-50"
+          aria-label="Add new listing"
+        >
+          <Plus size={28} />
+        </button>
       </div>
     </div>
   );

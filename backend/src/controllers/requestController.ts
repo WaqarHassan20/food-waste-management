@@ -288,6 +288,26 @@ export const updateFoodRequestStatus = async (
         });
       }
 
+      // If approving, mark the food listing as RESERVED/CLAIMED
+      if (status === 'APPROVED' && foodRequest.status === 'PENDING') {
+        await tx.foodListing.update({
+          where: { id: foodRequest.foodListingId },
+          data: {
+            status: 'RESERVED', // Reserve the food for this user
+          },
+        });
+      }
+
+      // If completing (picked up), mark the food listing as CLAIMED
+      if (status === 'COMPLETED' && foodRequest.status === 'APPROVED') {
+        await tx.foodListing.update({
+          where: { id: foodRequest.foodListingId },
+          data: {
+            status: 'CLAIMED', // Food has been picked up
+          },
+        });
+      }
+
       // Update food request
       const updated = await tx.foodRequest.update({
         where: { id },
