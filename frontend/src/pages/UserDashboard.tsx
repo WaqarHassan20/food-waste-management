@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Badge } from '../components/ui';
+import { Card, Button, Badge, ToastContainer, ConfirmDialog } from '../components/ui';
 import { Search, Users, Clock, MapPin, Package, CheckCircle, ShoppingBag } from 'lucide-react';
 import { foodAPI, requestAPI } from '../services/api';
-import { FoodListing, FoodRequest } from '../types';
+import type { FoodListing, FoodRequest } from '../types';
+import { useToast } from '../hooks/useToast';
 
 interface UserDashboardProps {
   userName: string;
@@ -19,6 +20,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
     pending: 0,
     completed: 0,
   });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    requestId: string;
+  }>({ isOpen: false, requestId: '' });
+
+  const toast = useToast();
 
   useEffect(() => {
     loadData();
@@ -29,15 +36,22 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
       setLoading(true);
       if (activeTab === 'browse') {
         const response: any = await foodAPI.getAllFood({ limit: 20 });
-        setAvailableFood(response.foodListings || []);
-        setStats(prev => ({ ...prev, available: response.foodListings?.length || 0 }));
+        // Handle both response.data.foodListings (from interceptor) and response.foodListings (direct)
+        const data = response.data || response;
+        const listings = data.foodListings || data || [];
+        setAvailableFood(listings);
+        setStats(prev => ({ ...prev, available: listings.length }));
       } else if (activeTab === 'requests') {
-        const requests: any = await requestAPI.getMyRequests();
+        const response: any = await requestAPI.getMyRequests();
+        // Handle both response.data (from interceptor) and response (direct)
+        const requests = response.data || response || [];
         const pending = requests.filter((r: FoodRequest) => r.status === 'PENDING' || r.status === 'APPROVED');
         setMyRequests(pending);
         setStats(prev => ({ ...prev, pending: pending.length }));
       } else if (activeTab === 'history') {
-        const requests: any = await requestAPI.getMyRequests('COMPLETED');
+        const response: any = await requestAPI.getMyRequests('COMPLETED');
+        // Handle both response.data (from interceptor) and response (direct)
+        const requests = response.data || response || [];
         setCompletedRequests(requests);
         setStats(prev => ({ ...prev, completed: requests.length }));
       }
@@ -55,22 +69,24 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
         quantity,
         message: 'I would like to request this food',
       });
-      alert('Request sent successfully!');
+      toast.success('Request sent successfully!');
       loadData();
     } catch (error: any) {
-      alert(error.message || 'Failed to send request');
+      toast.error(error.message || 'Failed to send request');
     }
   };
 
   const handleCancelRequest = async (requestId: string) => {
-    if (!confirm('Are you sure you want to cancel this request?')) return;
-    
+    setConfirmDialog({ isOpen: true, requestId });
+  };
+
+  const confirmCancelRequest = async () => {
     try {
-      await requestAPI.cancelRequest(requestId);
-      alert('Request cancelled successfully!');
+      await requestAPI.cancelRequest(confirmDialog.requestId);
+      toast.success('Request cancelled successfully!');
       loadData();
     } catch (error: any) {
-      alert(error.message || 'Failed to cancel request');
+      toast.error(error.message || 'Failed to cancel request');
     }
   };
 
@@ -79,7 +95,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
-    
+
     if (hours < 1) return 'Just now';
     if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
     if (hours < 48) return 'Yesterday';
@@ -178,6 +194,24 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                   availableFood.map((food) => (
                     <Card key={food.id}>
                       <div className="p-6 hover:shadow-xl transition-shadow">
+                        {/* Food Image */}
+                        {food.imageUrl || food.imageData ? (
+                          <div className="mb-4 rounded-lg overflow-hidden">
+                            <img
+                              src={food.imageUrl || `http://localhost:3000/api/v1/food/${food.id}/image`}
+                              alt={food.title}
+                              className="w-full h-48 object-cover"
+                              onError={(e) => {
+                                // Fallback to placeholder if image fails to load
+                                e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23e5e7eb" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%236b7280" font-family="sans-serif"%3ENo Image%3C/text%3E%3C/svg%3E';
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="mb-4 rounded-lg overflow-hidden bg-gray-200 h-48 flex items-center justify-center">
+                            <span className="text-gray-500">No image available</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-start mb-4">
                           <h3 className="text-xl font-bold text-gray-900">{food.title}</h3>
                           <Badge variant="success">{food.status}</Badge>
@@ -201,7 +235,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                             <span>{food.restaurant?.address}</span>
                           </div>
                         </div>
-                        <Button 
+                        <Button
                           className="w-full"
                           onClick={() => handleRequestFood(food.id, Math.min(food.quantity, 1))}
                         >
@@ -313,6 +347,21 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
           </>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, requestId: '' })}
+        onConfirm={confirmCancelRequest}
+        title="Cancel Request"
+        message="Are you sure you want to cancel this request? This action cannot be undone."
+        confirmText="Yes, Cancel"
+        cancelText="No, Keep It"
+        type="warning"
+      />
     </div>
   );
 };

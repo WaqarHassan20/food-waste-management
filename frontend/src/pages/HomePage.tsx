@@ -1,13 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { ArrowRight, Users, UtensilsCrossed, Star, CheckCircle, Package, Sparkles, Search, Award, TrendingUp, Heart, Shield } from 'lucide-react';
 
-interface HomePageProps {
-  onNavigateToAuth: (mode?: 'signin' | 'signup') => void;
-  onNavigateToBrowse: () => void;
-}
+export const HomePage: React.FC = () => {
+  const navigate = useNavigate();
 
-export const HomePage: React.FC<HomePageProps> = ({ onNavigateToAuth, onNavigateToBrowse }) => {
   return (
     <div className="bg-linear-to-br from-emerald-100 via-teal-100 to-cyan-100">
       {/* Hero Section */}
@@ -24,11 +22,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToAuth, onNavigate
             Connect restaurants with surplus food to people who need it most. Together, we're building a sustainable future while fighting hunger in our communities.
           </p>
           <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-            <Button size="lg" onClick={() => onNavigateToAuth('signup')} className="shadow-xl">
+            <Button size="lg" onClick={() => navigate('/auth/signup')} className="shadow-xl">
               <Sparkles size={20} className="mr-2" />
               Get Started Free
             </Button>
-            <Button size="lg" variant="outline" onClick={onNavigateToBrowse}>
+            <Button size="lg" variant="outline" onClick={() => navigate('/browse')}>
               <Search size={20} className="mr-2" />
               Browse Food Listings
             </Button>
@@ -295,11 +293,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToAuth, onNavigate
               Join thousands of restaurants and users working together to reduce waste and feed communities. Start your journey today!
             </p>
             <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-              <Button size="lg" variant="outline" className="bg-white text-emerald-600 hover:bg-emerald-50 shadow-xl border-2 border-white" onClick={() => onNavigateToAuth('signup')}>
+              <Button size="lg" variant="outline" className="bg-white text-emerald-600 hover:bg-emerald-50 shadow-xl border-2 border-white" onClick={() => navigate('/auth/signup')}>
                 <Sparkles size={20} className="mr-2" />
                 Sign Up Now - It's Free
               </Button>
-              <Button size="lg" className="bg-emerald-900 hover:bg-emerald-950 shadow-xl" onClick={onNavigateToBrowse}>
+              <Button size="lg" className="bg-emerald-900 hover:bg-emerald-950 shadow-xl" onClick={() => navigate('/browse')}>
                 <ArrowRight size={20} className="mr-2" />
                 Explore Food Listings
               </Button>

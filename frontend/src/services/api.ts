@@ -1,49 +1,46 @@
+import axios, { type AxiosInstance, type AxiosError } from 'axios';
+
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
-// Get token from localStorage
-const getToken = (): string | null => {
-  return localStorage.getItem('token');
-};
-
-// Get auth headers
-const getAuthHeaders = (): HeadersInit => {
-  const token = getToken();
-  return {
+// Create axios instance
+const axiosInstance: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
+  },
+});
 
-// Generic API request handler
-async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      ...getAuthHeaders(),
-      ...options.headers,
-    },
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.message || 'API request failed');
+// Request interceptor to add token
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
+);
 
-  return data.data;
-}
+// Response interceptor to handle errors
+axiosInstance.interceptors.response.use(
+  (response) => response.data,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/auth';
+    }
+    return Promise.reject(error.response?.data || error);
+  }
+);
 
 // Auth API
 export const authAPI = {
   login: (email: string, password: string) =>
-    apiRequest('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+    axiosInstance.post('/auth/login', { email, password }),
 
   register: (userData: {
     email: string;
@@ -53,35 +50,53 @@ export const authAPI = {
     phone?: string;
     address?: string;
   }) =>
-    apiRequest('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    }),
+    axiosInstance.post('/auth/register', userData),
 
-  getProfile: () => apiRequest('/auth/profile'),
+  restaurantRegister: (restaurantData: {
+    email: string;
+    password: string;
+    restaurantName: string;
+    description?: string;
+    address: string;
+    phone: string;
+    latitude?: number;
+    longitude?: number;
+    businessLicense?: string;
+  }) =>
+    axiosInstance.post('/auth/restaurant/register', restaurantData),
+
+  restaurantLogin: (email: string, password: string) =>
+    axiosInstance.post('/auth/restaurant/login', { email, password }),
+
+  getRestaurantProfile: () =>
+    axiosInstance.get('/auth/restaurant/profile'),
+
+  updateRestaurantProfile: (data: {
+    restaurantName?: string;
+    description?: string;
+    address?: string;
+    phone?: string;
+    latitude?: number;
+    longitude?: number;
+  }) =>
+    axiosInstance.put('/auth/restaurant/profile', data),
+
+  getProfile: () => axiosInstance.get('/auth/profile'),
 
   updateProfile: (data: { name?: string; phone?: string; address?: string }) =>
-    apiRequest('/auth/profile', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    axiosInstance.put('/auth/profile', data),
 };
 
 // Food API
 export const foodAPI = {
-  getAllFood: (params?: { page?: number; limit?: number; category?: string; search?: string }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.category) queryParams.append('category', params.category);
-    if (params?.search) queryParams.append('search', params.search);
-    
-    return apiRequest(`/food?${queryParams.toString()}`);
-  },
+  getAllFood: (params?: { page?: number; limit?: number; category?: string; search?: string }) =>
+    axiosInstance.get('/food', { params }),
 
-  getFoodById: (id: string) => apiRequest(`/food/${id}`),
+  getFoodById: (id: string) =>
+    axiosInstance.get(`/food/${id}`),
 
-  getMyListings: () => apiRequest('/food/my/listings'),
+  getMyListings: () =>
+    axiosInstance.get('/food/my/listings'),
 
   createListing: (data: {
     title: string;
@@ -91,23 +106,17 @@ export const foodAPI = {
     expiryDate: string;
     pickupTime: string;
     category?: string;
+    imageData?: string;
+    imageMimeType?: string;
     imageUrl?: string;
   }) =>
-    apiRequest('/food', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    axiosInstance.post('/food', data),
 
   updateListing: (id: string, data: any) =>
-    apiRequest(`/food/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    axiosInstance.put(`/food/${id}`, data),
 
   deleteListing: (id: string) =>
-    apiRequest(`/food/${id}`, {
-      method: 'DELETE',
-    }),
+    axiosInstance.delete(`/food/${id}`),
 };
 
 // Request API
@@ -117,47 +126,31 @@ export const requestAPI = {
     quantity: number;
     message?: string;
   }) =>
-    apiRequest('/requests', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    axiosInstance.post('/requests', data),
 
-  getMyRequests: (status?: string) => {
-    const queryParams = status ? `?status=${status}` : '';
-    return apiRequest(`/requests/my${queryParams}`);
-  },
+  getMyRequests: (status?: string) =>
+    axiosInstance.get('/requests/my', { params: { status } }),
 
-  getRestaurantRequests: (status?: string) => {
-    const queryParams = status ? `?status=${status}` : '';
-    return apiRequest(`/requests/restaurant${queryParams}`);
-  },
+  getRestaurantRequests: (status?: string) =>
+    axiosInstance.get('/requests/restaurant', { params: { status } }),
 
   updateRequestStatus: (id: string, status: string, pickupDate?: string) =>
-    apiRequest(`/requests/${id}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ status, pickupDate }),
-    }),
+    axiosInstance.put(`/requests/${id}/status`, { status, pickupDate }),
 
   cancelRequest: (id: string) =>
-    apiRequest(`/requests/${id}/cancel`, {
-      method: 'PUT',
-    }),
+    axiosInstance.put(`/requests/${id}/cancel`),
 };
 
 // Restaurant API
 export const restaurantAPI = {
-  getAllRestaurants: (params?: { page?: number; limit?: number; search?: string }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.search) queryParams.append('search', params.search);
-    
-    return apiRequest(`/restaurants?${queryParams.toString()}`);
-  },
+  getAllRestaurants: (params?: { page?: number; limit?: number; search?: string }) =>
+    axiosInstance.get('/restaurants', { params }),
 
-  getRestaurantById: (id: string) => apiRequest(`/restaurants/${id}`),
+  getRestaurantById: (id: string) =>
+    axiosInstance.get(`/restaurants/${id}`),
 
-  getMyRestaurant: () => apiRequest('/restaurants/my/profile'),
+  getMyRestaurant: () =>
+    axiosInstance.get('/restaurants/my/profile'),
 
   createRestaurant: (data: {
     restaurantName: string;
@@ -168,82 +161,52 @@ export const restaurantAPI = {
     longitude?: number;
     businessLicense?: string;
   }) =>
-    apiRequest('/restaurants', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    axiosInstance.post('/restaurants', data),
 
   updateRestaurant: (data: any) =>
-    apiRequest('/restaurants', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    axiosInstance.put('/restaurants', data),
 };
 
 // Notification API
 export const notificationAPI = {
-  getNotifications: (unreadOnly?: boolean) => {
-    const queryParams = unreadOnly ? '?unreadOnly=true' : '';
-    return apiRequest(`/notifications${queryParams}`);
-  },
+  getNotifications: (unreadOnly?: boolean) =>
+    axiosInstance.get('/notifications', { params: { unreadOnly } }),
 
   markAsRead: (id: string) =>
-    apiRequest(`/notifications/${id}/read`, {
-      method: 'PUT',
-    }),
+    axiosInstance.put(`/notifications/${id}/read`),
 
   markAllAsRead: () =>
-    apiRequest('/notifications/read-all', {
-      method: 'PUT',
-    }),
+    axiosInstance.put('/notifications/read-all'),
 
   deleteNotification: (id: string) =>
-    apiRequest(`/notifications/${id}`, {
-      method: 'DELETE',
-    }),
+    axiosInstance.delete(`/notifications/${id}`),
 };
 
 // Admin API
 export const adminAPI = {
-  getDashboardStats: () => apiRequest('/admin/dashboard/stats'),
+  getDashboardStats: () =>
+    axiosInstance.get('/admin/dashboard/stats'),
 
-  getAllUsers: (params?: { page?: number; limit?: number; role?: string; search?: string }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.role) queryParams.append('role', params.role);
-    if (params?.search) queryParams.append('search', params.search);
-    
-    return apiRequest(`/admin/users?${queryParams.toString()}`);
-  },
+  getAllUsers: (params?: { page?: number; limit?: number; role?: string; search?: string }) =>
+    axiosInstance.get('/admin/users', { params }),
 
-  getUserById: (id: string) => apiRequest(`/admin/users/${id}`),
+  getUserById: (id: string) =>
+    axiosInstance.get(`/admin/users/${id}`),
 
   updateUserStatus: (id: string, data: { isActive?: boolean; isVerified?: boolean }) =>
-    apiRequest(`/admin/users/${id}/status`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    axiosInstance.put(`/admin/users/${id}/status`, data),
 
   deleteUser: (id: string) =>
-    apiRequest(`/admin/users/${id}`, {
-      method: 'DELETE',
-    }),
+    axiosInstance.delete(`/admin/users/${id}`),
 
   verifyRestaurant: (id: string, isVerified: boolean) =>
-    apiRequest(`/admin/restaurants/${id}/verify`, {
-      method: 'PUT',
-      body: JSON.stringify({ isVerified }),
-    }),
+    axiosInstance.put(`/admin/restaurants/${id}/verify`, { isVerified }),
 
-  getAllRequests: (params?: { page?: number; limit?: number; status?: string }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.status) queryParams.append('status', params.status);
-    
-    return apiRequest(`/admin/requests?${queryParams.toString()}`);
-  },
+  deleteRestaurant: (id: string) =>
+    axiosInstance.delete(`/admin/restaurants/${id}`),
+
+  getAllRequests: (params?: { page?: number; limit?: number; status?: string }) =>
+    axiosInstance.get('/admin/requests', { params }),
 };
 
 export default {
@@ -253,4 +216,5 @@ export default {
   restaurant: restaurantAPI,
   notification: notificationAPI,
   admin: adminAPI,
+  axiosInstance,
 };

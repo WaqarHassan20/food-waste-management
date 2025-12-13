@@ -1,34 +1,145 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Input, Logo } from '../components/ui';
 import { Users, UtensilsCrossed, Shield, ArrowLeft } from 'lucide-react';
 import type { UserRole } from '../types';
+import { authAPI } from '../services/api';
 
 interface AuthPageProps {
-  onLogin: (role: UserRole, name: string) => void;
-  onNavigateToHome: () => void;
+  onLogin: (role: UserRole, name: string, token: string, userId: string) => void;
   initialMode?: 'signin' | 'signup';
 }
 
-export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onNavigateToHome, initialMode = 'signin' }) => {
+export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, initialMode = 'signin' }) => {
+  const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(initialMode === 'signup');
   const [selectedRole, setSelectedRole] = useState<UserRole>('USER');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
+    phone: '',
+    address: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
-    if (isSignUp && formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
-      return;
+    try {
+      if (isSignUp) {
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match!');
+          setIsLoading(false);
+          return;
+        }
+
+        let response: any;
+
+        if (selectedRole === 'RESTAURANT') {
+          // Use restaurant registration endpoint
+          response = await authAPI.restaurantRegister({
+            email: formData.email,
+            password: formData.password,
+            restaurantName: formData.name,
+            description: '',
+            address: formData.address || '',
+            phone: formData.phone || '',
+          });
+
+          // Backend returns { success, message, data: { restaurant, token } }
+          // Axios interceptor extracts response.data, so we get { success, message, data }
+          const { restaurant, token } = response.data || response;
+
+          if (!restaurant || !token) {
+            throw new Error('Invalid response from server');
+          }
+
+          // Save token and restaurant data
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify({
+            ...restaurant,
+            role: 'RESTAURANT',
+            name: restaurant.restaurantName,
+          }));
+
+          onLogin('RESTAURANT', restaurant.restaurantName, token, restaurant.id);
+        } else {
+          // Use regular user registration endpoint
+          response = await authAPI.register({
+            email: formData.email,
+            password: formData.password,
+            name: formData.name,
+            role: selectedRole,
+            phone: formData.phone || undefined,
+            address: formData.address || undefined,
+          });
+
+          // Backend returns { success, message, data: { user, token } }
+          // Axios interceptor extracts response.data, so we get { success, message, data }
+          const { user, token } = response.data || response;
+
+          if (!user || !token) {
+            throw new Error('Invalid response from server');
+          }
+
+          // Save token to localStorage
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(user));
+
+          onLogin(user.role, user.name, token, user.id);
+        }
+      } else {
+        // Login logic
+        let response: any;
+
+        if (selectedRole === 'RESTAURANT') {
+          response = await authAPI.restaurantLogin(formData.email, formData.password);
+
+          // Backend returns { success, message, data: { restaurant, token } }
+          // Axios interceptor extracts response.data, so we get { success, message, data }
+          const { restaurant, token } = response.data || response;
+
+          if (!restaurant || !token) {
+            throw new Error('Invalid response from server');
+          }
+
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify({
+            ...restaurant,
+            role: 'RESTAURANT',
+            name: restaurant.restaurantName,
+          }));
+
+          onLogin('RESTAURANT', restaurant.restaurantName, token, restaurant.id);
+        } else {
+          response = await authAPI.login(formData.email, formData.password);
+
+          // Backend returns { success, message, data: { user, token } }
+          // Axios interceptor extracts response.data, so we get { success, message, data }
+          const { user, token } = response.data || response;
+
+          if (!user || !token) {
+            throw new Error('Invalid response from server');
+          }
+
+          // Save token to localStorage
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(user));
+
+          onLogin(user.role, user.name, token, user.id);
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please try again.');
+      console.error('Auth error:', err);
+    } finally {
+      setIsLoading(false);
     }
-
-    // For demo purposes, we'll just log them in
-    onLogin(selectedRole, formData.name || formData.email.split('@')[0]);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,7 +154,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onNavigateToHome, i
       <div className="container mx-auto max-w-lg">
         <div className="text-center mb-8">
           <button
-            onClick={onNavigateToHome}
+            onClick={() => navigate('/')}
             className="inline-flex items-center text-emerald-700 hover:text-emerald-800 mb-6 font-medium transition-colors group"
           >
             <ArrowLeft size={20} className="transform group-hover:-translate-x-1 transition-transform" />
@@ -108,6 +219,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onNavigateToHome, i
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
               {isSignUp && (
                 <Input
                   label="Full Name"
@@ -141,19 +258,39 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onNavigateToHome, i
               />
 
               {isSignUp && (
-                <Input
-                  label="Confirm Password"
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  placeholder="Confirm your password"
-                  required
-                />
+                <>
+                  <Input
+                    label="Confirm Password"
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="Confirm your password"
+                    required
+                  />
+
+                  <Input
+                    label="Phone Number (Optional)"
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="Enter your phone number"
+                  />
+
+                  <Input
+                    label="Address (Optional)"
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="Enter your address"
+                  />
+                </>
               )}
 
-              <Button type="submit" className="w-full mt-6" size="lg">
-                {isSignUp ? 'Create Account' : 'Sign In'}
+              <Button type="submit" className="w-full mt-6" size="lg" disabled={isLoading}>
+                {isLoading ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
               </Button>
             </form>
 

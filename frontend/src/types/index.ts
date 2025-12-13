@@ -49,7 +49,9 @@ export interface FoodListing {
   expiryDate: string;
   pickupTime: string;
   status: FoodStatus;
-  imageUrl?: string;
+  imageData?: any; // Binary data indicating image exists
+  imageMimeType?: string;
+  imageUrl?: string; // URL to external image
   category?: string;
   createdAt: string;
   updatedAt: string;
@@ -130,7 +132,6 @@ export interface DashboardStats {
   totalRequests: number;
   pendingRequests: number;
   approvedRequests: number;
-}
   read: boolean;
   createdAt: string;
 }

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button, Logo } from '../ui';
 import { LogOut, LogIn, UserPlus, UserCircle } from 'lucide-react';
 import type { UserRole } from '../../types';
@@ -7,9 +8,6 @@ interface NavbarProps {
   isAuthenticated: boolean;
   userRole: UserRole | null;
   userName: string | null;
-  onNavigateToAuth: (mode?: 'signin' | 'signup') => void;
-  onNavigateToHome: () => void;
-  onNavigateToDashboard: () => void;
   onLogout: () => void;
 }
 
@@ -17,15 +15,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   isAuthenticated,
   userRole,
   userName,
-  onNavigateToAuth,
-  onNavigateToHome,
   onLogout,
 }) => {
+  const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleAuthClick = (mode: 'signin' | 'signup') => {
-    onNavigateToAuth(mode);
+    navigate(`/auth/${mode}`);
   };
 
   // Close dropdown when clicking outside
@@ -44,9 +41,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-emerald-100 shadow-sm transition-all duration-300">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <button onClick={onNavigateToHome} className="cursor-pointer hover:opacity-90 transition-opacity">
+          <Link to="/" className="cursor-pointer hover:opacity-90 transition-opacity">
             <Logo size="md" variant="light" showText={true} />
-          </button>
+          </Link>
 
           <div className="flex items-center gap-4">
             {isAuthenticated ? (
@@ -68,16 +65,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="relative w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center hover:bg-slate-700 transition-colors duration-200 border border-slate-500"
                   >
                     {/* Simple User Avatar Icon */}
-                    <UserCircle 
-                      size={24} 
-                      className="text-white" 
+                    <UserCircle
+                      size={24}
+                      className="text-white"
                       strokeWidth={2}
                     />
                   </button>
 
                   {/* Dropdown Menu - Slides in from right aligned with profile */}
                   {isDropdownOpen && (
-                    <div 
+                    <div
                       className="absolute left-full ml-2 top-1/2 -translate-y-1/2 animate-slideInRight"
                       style={{
                         animation: 'slideInRight 0.2s ease-out forwards'
