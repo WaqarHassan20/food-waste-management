@@ -4,6 +4,7 @@ import {
   getUserById,
   updateUserStatus,
   deleteUser,
+  getAllRestaurants,
   verifyRestaurant,
   deleteRestaurant,
   getDashboardStats,
@@ -25,7 +26,8 @@ adminRouter.get('/users/:id', getUserById);
 adminRouter.put('/users/:id/status', updateUserStatus);
 adminRouter.delete('/users/:id', deleteUser);
 
-// Restaurant verification
+// Restaurant management
+adminRouter.get('/restaurants', getAllRestaurants);
 adminRouter.put('/restaurants/:id/verify', verifyRestaurant);
 adminRouter.delete('/restaurants/:id', deleteRestaurant);
 

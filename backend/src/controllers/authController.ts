@@ -3,11 +3,20 @@ import { successResponse, errorResponse } from '../utils/response';
 import type { Request, Response } from 'express';
 import { generateToken } from '../utils/jwt';
 import { prisma } from '../db';
+import { NotificationService } from '../services/notificationService';
 
 
 export const register = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { email, password, name, phone, role, address } = req.body;
+    const { email, password, name, phone, role, address, adminPasscode } = req.body;
+
+    // Validate admin passcode if registering as ADMIN
+    if (role === 'ADMIN') {
+      const requiredAdminPasscode = process.env.ADMIN_PASSCODE || 'admin123secure';
+      if (!adminPasscode || adminPasscode !== requiredAdminPasscode) {
+        return errorResponse(res, 'Invalid admin passcode. Only authorized personnel can create admin accounts.', 403);
+      }
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -42,6 +51,20 @@ export const register = async (req: Request, res: Response): Promise<Response> =
       },
     });
 
+    // Notify admins about new user registration (only for regular users, not admins)
+    if (user.role === 'USER') {
+      try {
+        await NotificationService.notifyAdminsNewUserRegistration(
+          user.name,
+          user.email,
+          user.id
+        );
+      } catch (notifError) {
+        console.error('Failed to send admin notification:', notifError);
+        // Don't fail registration if notification fails
+      }
+    }
+
     // Generate token
     const token = generateToken({
       userId: user.id,
@@ -64,7 +87,7 @@ export const register = async (req: Request, res: Response): Promise<Response> =
 
 export const login = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { email, password } = req.body;
+    const { email, password, adminPasscode } = req.body;
 
     // Find user
     const user = await prisma.user.findUnique({
@@ -73,6 +96,14 @@ export const login = async (req: Request, res: Response): Promise<Response> => {
 
     if (!user) {
       return errorResponse(res, 'Invalid email or password', 401);
+    }
+
+    // Validate admin passcode if user is ADMIN
+    if (user.role === 'ADMIN') {
+      const requiredAdminPasscode = process.env.ADMIN_PASSCODE || 'admin123secure';
+      if (!adminPasscode || adminPasscode !== requiredAdminPasscode) {
+        return errorResponse(res, 'Invalid admin passcode. Admin login requires authorization.', 403);
+      }
     }
 
     // Check if user is active
@@ -226,6 +257,18 @@ export const restaurantRegister = async (
         createdAt: true,
       },
     });
+
+    // Notify admins about new restaurant registration
+    try {
+      await NotificationService.notifyAdminsNewRestaurantRegistration(
+        restaurant.restaurantName,
+        restaurant.email,
+        restaurant.id
+      );
+    } catch (notifError) {
+      console.error('Failed to send admin notification:', notifError);
+      // Don't fail registration if notification fails
+    }
 
     // Generate token
     const token = generateToken({

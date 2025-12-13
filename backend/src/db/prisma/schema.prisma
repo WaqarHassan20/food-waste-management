@@ -87,7 +87,8 @@ model Restaurant {
   updatedAt       DateTime @updatedAt
 
   // Relations
-  foodListings FoodListing[]
+  foodListings            FoodListing[]
+  restaurantNotifications RestaurantNotification[]
 
   @@map("restaurants")
 }
@@ -134,17 +135,57 @@ model FoodRequest {
   @@map("food_requests")
 }
 
+enum NotificationType {
+  REQUEST_CREATED
+  REQUEST_APPROVED
+  REQUEST_REJECTED
+  REQUEST_CANCELLED
+  REQUEST_COMPLETED
+  NEW_FOOD_AVAILABLE
+  LISTING_EXPIRING_SOON
+  RESTAURANT_VERIFIED
+  RESTAURANT_UNVERIFIED
+  USER_VERIFIED
+  SYSTEM_ANNOUNCEMENT
+  NEW_USER_REGISTRATION
+  NEW_RESTAURANT_REGISTRATION
+  SYSTEM_ALERT
+}
+
 model Notification {
-  id        String   @id @default(uuid())
+  id        String           @id @default(uuid())
   userId    String
   title     String
   message   String
-  isRead    Boolean  @default(false)
-  type      String // request_approved, request_rejected, new_food_available, etc
-  createdAt DateTime @default(now())
+  isRead    Boolean          @default(false)
+  type      NotificationType
+  metadata  Json? // Additional data like requestId, foodListingId, etc
+  actionUrl String? // URL to navigate to when clicking notification
+  createdAt DateTime         @default(now())
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
   @@map("notifications")
+}
+
+model RestaurantNotification {
+  id           String           @id @default(uuid())
+  restaurantId String
+  title        String
+  message      String
+  isRead       Boolean          @default(false)
+  type         NotificationType
+  metadata     Json? // Additional data like requestId, foodListingId, userId
+  actionUrl    String? // URL to navigate to when clicking notification
+  createdAt    DateTime         @default(now())
+
+  // Relations
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, isRead])
+  @@index([restaurantId, createdAt])
+  @@map("restaurant_notifications")
 }

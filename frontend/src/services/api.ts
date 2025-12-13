@@ -28,19 +28,36 @@ axiosInstance.interceptors.request.use(
 // Response interceptor to handle errors
 axiosInstance.interceptors.response.use(
   (response) => response.data,
-  (error: AxiosError) => {
+  (error: AxiosError<any>) => {
+    // Only redirect to auth page if token is expired/invalid (401)
+    // Don't redirect for wrong credentials or other errors
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/auth';
+      // Check if user is already on auth page or it's a login/register attempt
+      const isAuthPage = window.location.pathname.includes('/auth');
+      const isLoginAttempt = error.config?.url?.includes('/login') || error.config?.url?.includes('/register');
+
+      // Only clear storage and redirect if it's not a login attempt and not already on auth page
+      if (!isAuthPage && !isLoginAttempt) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/auth/signin';
+      }
     }
-    return Promise.reject(error.response?.data || error);
+
+    // Return error with proper message structure
+    const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
+    return Promise.reject({
+      message: errorMessage,
+      status: error.response?.status,
+      data: error.response?.data
+    });
   }
 );
 
 // Auth API
 export const authAPI = {
-  login: (email: string, password: string) =>
-    axiosInstance.post('/auth/login', { email, password }),
+  login: (email: string, password: string, adminPasscode?: string) =>
+    axiosInstance.post('/auth/login', { email, password, adminPasscode }),
 
   register: (userData: {
     email: string;
@@ -49,6 +66,7 @@ export const authAPI = {
     role: string;
     phone?: string;
     address?: string;
+    adminPasscode?: string;
   }) =>
     axiosInstance.post('/auth/register', userData),
 
@@ -172,6 +190,9 @@ export const notificationAPI = {
   getNotifications: (unreadOnly?: boolean) =>
     axiosInstance.get('/notifications', { params: { unreadOnly } }),
 
+  getUnreadCount: () =>
+    axiosInstance.get('/notifications/unread-count'),
+
   markAsRead: (id: string) =>
     axiosInstance.put(`/notifications/${id}/read`),
 
@@ -180,6 +201,9 @@ export const notificationAPI = {
 
   deleteNotification: (id: string) =>
     axiosInstance.delete(`/notifications/${id}`),
+
+  clearAll: () =>
+    axiosInstance.delete('/notifications/clear-all'),
 };
 
 // Admin API
@@ -198,6 +222,9 @@ export const adminAPI = {
 
   deleteUser: (id: string) =>
     axiosInstance.delete(`/admin/users/${id}`),
+
+  getAllRestaurants: (params?: { page?: number; limit?: number; search?: string }) =>
+    axiosInstance.get('/admin/restaurants', { params }),
 
   verifyRestaurant: (id: string, isVerified: boolean) =>
     axiosInstance.put(`/admin/restaurants/${id}/verify`, { isVerified }),

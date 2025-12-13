@@ -27,7 +27,10 @@ DATABASE_URL="postgresql://postgres:mysecretpassword@localhost:5432/food_waste_d
 JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
 PORT=3000
 FRONTEND_URL="http://localhost:5173"
+ADMIN_PASSCODE="admin123secure"
 ```
+
+**⚠️ Important**: The `ADMIN_PASSCODE` is required for creating or logging into admin accounts. Change this in production!
 
 Frontend `.env` is configured for local development:
 ```env
@@ -72,7 +75,9 @@ npm run dev:frontend
 After signup, you can create test accounts with different roles:
 - **User**: Browse and request food
 - **Restaurant**: Create food listings
-- **Admin**: Manage users and restaurants
+- **Admin**: Manage users and restaurants (requires admin passcode: `admin123secure`)
+
+**Note**: When signing up or logging in as Admin, you'll need to enter the admin passcode for security.
 
 ## 📚 Features
 

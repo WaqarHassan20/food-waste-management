@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Logo } from '../ui';
-import { LogOut, LogIn, UserPlus, UserCircle } from 'lucide-react';
+import { Button, Logo, NotificationDropdown } from '../ui';
+import { LogOut, LogIn, UserPlus, UserCircle, ShieldCheck, Store } from 'lucide-react';
 import type { UserRole } from '../../types';
 
 interface NavbarProps {
@@ -58,28 +58,40 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                 </div>
 
+                {/* Notifications */}
+                <NotificationDropdown />
+
                 {/* Profile Dropdown */}
                 <div className="relative flex items-center" ref={dropdownRef}>
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="relative w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center hover:bg-slate-700 transition-colors duration-200 border border-slate-500"
                   >
-                    {/* Simple User Avatar Icon */}
-                    <UserCircle
-                      size={24}
-                      className="text-white"
-                      strokeWidth={2}
-                    />
+                    {/* Role-based Avatar Icons */}
+                    {userRole === 'ADMIN' ? (
+                      <ShieldCheck
+                        size={24}
+                        className="text-white"
+                        strokeWidth={2}
+                      />
+                    ) : userRole === 'RESTAURANT' ? (
+                      <Store
+                        size={24}
+                        className="text-white"
+                        strokeWidth={2}
+                      />
+                    ) : (
+                      <UserCircle
+                        size={24}
+                        className="text-white"
+                        strokeWidth={2}
+                      />
+                    )}
                   </button>
 
-                  {/* Dropdown Menu - Slides in from right aligned with profile */}
+                  {/* Dropdown Menu - Below the profile icon */}
                   {isDropdownOpen && (
-                    <div
-                      className="absolute left-full ml-2 top-1/2 -translate-y-1/2 animate-slideInRight"
-                      style={{
-                        animation: 'slideInRight 0.2s ease-out forwards'
-                      }}
-                    >
+                    <div className="absolute top-full mt-2 right-0 animate-slideDown">
                       <button
                         onClick={() => {
                           onLogout();
@@ -121,14 +133,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Add keyframe animation */}
       <style>{`
-        @keyframes slideInRight {
+        @keyframes slideDown {
           from {
             opacity: 0;
-            transform: translateX(-10px);
+            transform: translateY(-10px);
           }
           to {
             opacity: 1;
-            transform: translateX(0);
+            transform: translateY(0);
           }
         }
       `}</style>

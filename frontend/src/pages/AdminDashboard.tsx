@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge, ToastContainer, ConfirmDialog } from '../components/ui';
 import { BarChart3, Users, UtensilsCrossed, Trash2 } from 'lucide-react';
-import { adminAPI, restaurantAPI, foodAPI } from '../services/api';
+import { adminAPI, foodAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
 export const AdminDashboard: React.FC = () => {
@@ -16,12 +16,20 @@ export const AdminDashboard: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [recentListings, setRecentListings] = useState<any[]>([]);
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'ADMIN' | 'USER'>('all');
+  const [restaurantVerificationFilter, setRestaurantVerificationFilter] = useState<'all' | 'verified' | 'unverified'>('all');
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     type: 'user' | 'restaurant' | null;
     id: string;
     name: string;
   }>({ isOpen: false, type: null, id: '', name: '' });
+  const [suspendDialog, setSuspendDialog] = useState<{
+    isOpen: boolean;
+    id: string;
+    name: string;
+    currentStatus: boolean;
+  }>({ isOpen: false, id: '', name: '', currentStatus: false });
 
   const toast = useToast();
 
@@ -89,7 +97,7 @@ export const AdminDashboard: React.FC = () => {
 
   const loadRestaurants = async () => {
     try {
-      const response: any = await restaurantAPI.getAllRestaurants({ limit: 100 });
+      const response: any = await adminAPI.getAllRestaurants({ limit: 100 });
       console.log('Restaurants API Response:', response);
       // Response structure: { success, message, data: { restaurants, pagination } }
       const restaurants = response.data?.restaurants || response.restaurants || [];
@@ -127,10 +135,15 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    setSuspendDialog({ isOpen: true, id: userId, name: '', currentStatus });
+  };
+
+  const confirmSuspend = async () => {
     try {
-      await adminAPI.updateUserStatus(userId, { isActive: !currentStatus });
-      toast.success(`User ${!currentStatus ? 'activated' : 'suspended'} successfully`);
+      await adminAPI.updateUserStatus(suspendDialog.id, { isActive: !suspendDialog.currentStatus });
+      toast.success(`User ${!suspendDialog.currentStatus ? 'activated' : 'suspended'} successfully`);
       await loadUsers();
+      setSuspendDialog({ isOpen: false, id: '', name: '', currentStatus: false });
     } catch (error: any) {
       toast.error(error.message || 'Failed to update user status');
     }
@@ -210,12 +223,312 @@ export const AdminDashboard: React.FC = () => {
           </>
         )}
 
-        {activeTab === 'users' && (<Card><div className="p-6"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold text-gray-900">User Management</h3><Button variant="outline" onClick={loadUsers}>Refresh</Button></div>{loading ? (<div className="text-center py-12 text-gray-600">Loading...</div>) : (<div className="overflow-x-auto"><table className="w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{users.length === 0 ? (<tr><td colSpan={7} className="px-6 py-8 text-center text-gray-600">No users found</td></tr>) : (users.map((user: any) => (<tr key={user.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{user.name}</td><td className="px-6 py-4 whitespace-nowrap text-gray-600">{user.email}</td><td className="px-6 py-4 whitespace-nowrap text-gray-600">{user.phone || 'N/A'}</td><td className="px-6 py-4 whitespace-nowrap"><Badge variant="default">{user.role || user.type}</Badge></td><td className="px-6 py-4 whitespace-nowrap text-gray-600">{new Date(user.createdAt).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><Badge variant={user.isActive ? 'success' : 'error'}>{user.isActive ? 'Active' : 'Suspended'}</Badge></td><td className="px-6 py-4 whitespace-nowrap space-x-2"><Button size="sm" variant="outline" onClick={() => handleToggleUserStatus(user.id, user.isActive)}>{user.isActive ? 'Suspend' : 'Activate'}</Button><Button size="sm" variant="ghost" onClick={() => handleDeleteUser(user.id, user.name)}><Trash2 size={16} /></Button></td></tr>)))}</tbody></table></div>)}</div></Card>)}
+        {activeTab === 'users' && (
+          <Card>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">User Management</h3>
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setUserRoleFilter('all')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${userRoleFilter === 'all'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      All Users
+                    </button>
+                    <button
+                      onClick={() => setUserRoleFilter('ADMIN')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${userRoleFilter === 'ADMIN'
+                        ? 'bg-purple-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      Admins
+                    </button>
+                    <button
+                      onClick={() => setUserRoleFilter('USER')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${userRoleFilter === 'USER'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      Regular Users
+                    </button>
+                  </div>
+                  <Button variant="outline" onClick={loadUsers}>
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+              {loading ? (
+                <div className="text-center py-12 text-gray-600">Loading...</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Email
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Phone
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Role
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Joined
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {users
+                        .filter((user) => userRoleFilter === 'all' || user.role === userRoleFilter)
+                        .length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-8 text-center text-gray-600">
+                            No users found
+                          </td>
+                        </tr>
+                      ) : (
+                        users
+                          .filter((user) => userRoleFilter === 'all' || user.role === userRoleFilter)
+                          .map((user: any) => (
+                            <tr
+                              key={user.id}
+                              className={`hover:bg-gray-50 ${user.role === 'ADMIN' ? 'bg-purple-50' : 'bg-blue-50'
+                                }`}
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                                {user.name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                                {user.email}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                                {user.phone || 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'ADMIN'
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-blue-600 text-white'
+                                    }`}
+                                >
+                                  {user.role || user.type}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                                {new Date(user.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <Badge variant={user.isActive ? 'success' : 'error'}>
+                                  {user.isActive ? 'Active' : 'Suspended'}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
+                                  onClick={() => handleToggleUserStatus(user.id, user.isActive)}
+                                >
+                                  {user.isActive ? 'Suspend' : 'Activate'}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="hover:bg-red-50 hover:text-red-600 transition-colors"
+                                  onClick={() => handleDeleteUser(user.id, user.name)}
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
-        {activeTab === 'restaurants' && (<Card><div className="p-6"><div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold text-gray-900">Restaurant Management</h3><Button variant="outline" onClick={loadRestaurants}>Refresh</Button></div>{loading ? (<div className="text-center py-12 text-gray-600">Loading...</div>) : (<div className="overflow-x-auto"><table className="w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{restaurants.length === 0 ? (<tr><td colSpan={7} className="px-6 py-8 text-center text-gray-600">No restaurants found</td></tr>) : (restaurants.map((restaurant: any) => (<tr key={restaurant.id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{restaurant.restaurantName}</td><td className="px-6 py-4 text-gray-600">{restaurant.address}</td><td className="px-6 py-4 whitespace-nowrap text-gray-600">{restaurant.phone}</td><td className="px-6 py-4 whitespace-nowrap text-gray-900">{restaurant.rating?.toFixed(1) || 'N/A'} ⭐</td><td className="px-6 py-4 whitespace-nowrap text-gray-600">{new Date(restaurant.createdAt).toLocaleDateString()}</td><td className="px-6 py-4 whitespace-nowrap"><Badge variant={restaurant.isVerified ? 'success' : 'warning'}>{restaurant.isVerified ? 'Verified' : 'Pending'}</Badge></td><td className="px-6 py-4 whitespace-nowrap space-x-2"><Button size="sm" variant="outline" onClick={() => handleToggleRestaurantStatus(restaurant.id, restaurant.isVerified)}>{restaurant.isVerified ? 'Unverify' : 'Verify'}</Button><Button size="sm" variant="ghost" onClick={() => handleDeleteRestaurant(restaurant.id, restaurant.restaurantName)}><Trash2 size={16} /></Button></td></tr>)))}</tbody></table></div>)}</div></Card>)}
+        {activeTab === 'restaurants' && (
+          <Card>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">Restaurant Management</h3>
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setRestaurantVerificationFilter('all')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${restaurantVerificationFilter === 'all'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      All Restaurants
+                    </button>
+                    <button
+                      onClick={() => setRestaurantVerificationFilter('verified')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${restaurantVerificationFilter === 'verified'
+                        ? 'bg-green-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      Verified
+                    </button>
+                    <button
+                      onClick={() => setRestaurantVerificationFilter('unverified')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${restaurantVerificationFilter === 'unverified'
+                        ? 'bg-orange-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      Unverified
+                    </button>
+                  </div>
+                  <Button variant="outline" onClick={loadRestaurants}>
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+              {loading ? (
+                <div className="text-center py-12 text-gray-600">Loading...</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Address
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Phone
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Rating
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Joined
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {restaurants
+                        .filter((restaurant) =>
+                          restaurantVerificationFilter === 'all'
+                            ? true
+                            : restaurantVerificationFilter === 'verified'
+                              ? restaurant.isVerified
+                              : !restaurant.isVerified
+                        )
+                        .length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-8 text-center text-gray-600">
+                            No restaurants found
+                          </td>
+                        </tr>
+                      ) : (
+                        restaurants
+                          .filter((restaurant) =>
+                            restaurantVerificationFilter === 'all'
+                              ? true
+                              : restaurantVerificationFilter === 'verified'
+                                ? restaurant.isVerified
+                                : !restaurant.isVerified
+                          )
+                          .map((restaurant: any) => (
+                            <tr
+                              key={restaurant.id}
+                              className={`hover:bg-gray-50 ${restaurant.isVerified ? 'bg-green-50' : 'bg-orange-50'
+                                }`}
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                                {restaurant.restaurantName}
+                              </td>
+                              <td className="px-6 py-4 text-gray-600">{restaurant.address}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                                {restaurant.phone}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                                {restaurant.rating?.toFixed(1) || 'N/A'} ⭐
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                                {new Date(restaurant.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${restaurant.isVerified
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-orange-600 text-white'
+                                    }`}
+                                >
+                                  {restaurant.isVerified ? 'Verified' : 'Pending'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap space-x-2">
+                                <Button
+                                  size="sm"
+                                  className="hover:bg-red-50 hover:text-red-600 transition-colors"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleToggleRestaurantStatus(
+                                      restaurant.id,
+                                      restaurant.isVerified
+                                    )
+                                  }
+                                >
+                                  {restaurant.isVerified ? 'Unverify' : 'Verify'}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="hover:bg-red-50 hover:text-red-600 transition-colors"
+                                  onClick={() =>
+                                    handleDeleteRestaurant(restaurant.id, restaurant.restaurantName)
+                                  }
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
       </div>
 
       <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+
       <ConfirmDialog
         isOpen={deleteDialog.isOpen}
         onClose={() => setDeleteDialog({ isOpen: false, type: null, id: '', name: '' })}
@@ -225,6 +538,21 @@ export const AdminDashboard: React.FC = () => {
         confirmText="Yes, Delete"
         cancelText="Cancel"
         type="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={suspendDialog.isOpen}
+        onClose={() => setSuspendDialog({ isOpen: false, id: '', name: '', currentStatus: false })}
+        onConfirm={confirmSuspend}
+        title={suspendDialog.currentStatus ? 'Suspend User' : 'Activate User'}
+        message={
+          suspendDialog.currentStatus
+            ? 'Are you sure you want to suspend this user? They will not be able to access their account until reactivated.'
+            : 'Are you sure you want to activate this user? They will regain access to their account.'
+        }
+        confirmText={suspendDialog.currentStatus ? 'Yes, Suspend' : 'Yes, Activate'}
+        cancelText="Cancel"
+        type={suspendDialog.currentStatus ? 'danger' : 'info'}
       />
     </div>
   );

@@ -22,13 +22,13 @@ export const HomePage: React.FC = () => {
             Connect restaurants with surplus food to people who need it most. Together, we're building a sustainable future while fighting hunger in our communities.
           </p>
           <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-            <Button size="lg" onClick={() => navigate('/auth/signup')} className="shadow-xl">
+            <Button size="lg" onClick={() => navigate('/auth/signup/user')} className="shadow-xl">
               <Sparkles size={20} className="mr-2" />
               Get Started Free
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate('/browse')}>
+            <Button size="lg" variant="outline" onClick={() => navigate('/auth/signin/user')}>
               <Search size={20} className="mr-2" />
-              Browse Food Listings
+              Sign In to Browse Food
             </Button>
           </div>
           <p className="mt-6 text-sm text-gray-500">No credit card required  •  Free forever  •  Make an impact today</p>
@@ -293,13 +293,13 @@ export const HomePage: React.FC = () => {
               Join thousands of restaurants and users working together to reduce waste and feed communities. Start your journey today!
             </p>
             <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-              <Button size="lg" variant="outline" className="bg-white text-emerald-600 hover:bg-emerald-50 shadow-xl border-2 border-white" onClick={() => navigate('/auth/signup')}>
+              <Button size="lg" variant="outline" className="bg-white text-emerald-600 hover:bg-emerald-50 shadow-xl border-2 border-white" onClick={() => navigate('/auth/signup/user')}>
                 <Sparkles size={20} className="mr-2" />
                 Sign Up Now - It's Free
               </Button>
-              <Button size="lg" className="bg-emerald-900 hover:bg-emerald-950 shadow-xl" onClick={() => navigate('/browse')}>
+              <Button size="lg" className="bg-emerald-900 hover:bg-emerald-950 shadow-xl" onClick={() => navigate('/auth/signin/user')}>
                 <ArrowRight size={20} className="mr-2" />
-                Explore Food Listings
+                Sign In to Explore Food
               </Button>
             </div>
             <p className="mt-8 text-emerald-100 text-sm">Join our growing community • No credit card required • Cancel anytime</p>

@@ -41,6 +41,15 @@ export const createFoodListing = async (
       return errorResponse(res, 'Restaurant not found', 404);
     }
 
+    // Check if restaurant is verified
+    if (!restaurant.isVerified) {
+      return errorResponse(
+        res,
+        'Your restaurant needs to be verified by an admin before you can list food. Please wait for admin approval.',
+        403
+      );
+    }
+
     // Convert base64 image to Buffer if provided
     let imageBuffer: Buffer | undefined;
     if (imageData) {

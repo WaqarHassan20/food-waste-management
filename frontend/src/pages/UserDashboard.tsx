@@ -51,16 +51,22 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
         const data = response.data || response;
         let listings = data.foodListings || data || [];
 
-        // Get all user's requests (pending, approved, completed) to filter them out
+        // Get all user's active requests (only pending and approved) to filter them out
         const myRequestsResponse: any = await requestAPI.getMyRequests();
         const allMyRequests = myRequestsResponse.data || myRequestsResponse || [];
-        const myRequestedFoodIds = new Set(allMyRequests.map((r: FoodRequest) => r.foodListingId));
+        // Only filter out food items where user has PENDING or APPROVED requests
+        // REJECTED and CANCELLED requests should allow the food to appear again
+        const myActiveRequestedFoodIds = new Set(
+          allMyRequests
+            .filter((r: FoodRequest) => r.status === 'PENDING' || r.status === 'APPROVED')
+            .map((r: FoodRequest) => r.foodListingId)
+        );
 
         // Filter out foods that:
-        // 1. User has already requested
-        // 2. Have status RESERVED or CLAIMED (approved by restaurant for someone)
+        // 1. User has an active (pending/approved) request for
+        // 2. Have status RESERVED or CLAIMED (approved by restaurant for someone else)
         listings = listings.filter((food: FoodListing) =>
-          !myRequestedFoodIds.has(food.id) &&
+          !myActiveRequestedFoodIds.has(food.id) &&
           food.status === 'AVAILABLE'
         );
 
@@ -219,8 +225,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('ALL')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'ALL'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       All
@@ -228,8 +234,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('PREPARED_FOOD')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'PREPARED_FOOD'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       Prepared Food
@@ -237,8 +243,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('RAW_INGREDIENTS')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'RAW_INGREDIENTS'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       Raw Ingredients
@@ -246,8 +252,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('BAKERY')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'BAKERY'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       Bakery
@@ -255,8 +261,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('DAIRY')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'DAIRY'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       Dairy
@@ -264,8 +270,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('FRUITS_VEGETABLES')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'FRUITS_VEGETABLES'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       Fruits & Vegetables
@@ -273,8 +279,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('BEVERAGES')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'BEVERAGES'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       Beverages
@@ -282,8 +288,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('PACKAGED_FOOD')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'PACKAGED_FOOD'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       Packaged Food
@@ -291,8 +297,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('FROZEN_FOOD')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'FROZEN_FOOD'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       Frozen Food
@@ -300,8 +306,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     <button
                       onClick={() => setSelectedCategory('OTHER')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'OTHER'
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
                       Other

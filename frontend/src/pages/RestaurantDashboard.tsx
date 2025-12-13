@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge, Modal, Input, ToastContainer, ConfirmDialog } from '../components/ui';
-import { BarChart3, Package, Clock, Plus, CheckCircle, XCircle } from 'lucide-react';
-import { foodAPI, requestAPI } from '../services/api';
+import { BarChart3, Package, Clock, Plus, CheckCircle, XCircle, AlertCircle, ShieldCheck } from 'lucide-react';
+import { foodAPI, requestAPI, authAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { getCategoryLabel, type FoodCategory } from '../types';
 
@@ -21,6 +21,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
     isOpen: boolean;
     listingId: string;
   }>({ isOpen: false, listingId: '' });
+  const [restaurantProfile, setRestaurantProfile] = useState<any>(null);
 
   const toast = useToast();
 
@@ -43,61 +44,45 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
   const [completedListings, setCompletedListings] = useState<any[]>([]);
   const [filteredCompletedListings, setFilteredCompletedListings] = useState<any[]>([]);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [completedRequests, setCompletedRequests] = useState<any[]>([]);
 
   // Calculate dynamic stats based on actual data
-  const allListings = [...myListings, ...completedListings];
+  // Impact should be based on completed REQUESTS (actual pickups), not listings
   const stats = {
     totalListings: myListings.length,
     activeDonations: myListings.filter(l => l.status === 'AVAILABLE' || l.status === 'RESERVED').length,
-    completedDonations: completedListings.length,
-    totalImpactItems: allListings.reduce((sum, l) => sum + (l.quantity || 0), 0),
-    totalImpact: `${allListings.reduce((sum, l) => sum + (l.quantity || 0), 0)} items saved`,
-    thisMonthListings: allListings.filter(l => {
-      const createdDate = new Date(l.createdAt);
+    completedDonations: completedRequests.length,
+    totalImpactItems: completedRequests.reduce((sum, r) => sum + (r.quantity || 0), 0),
+    totalImpact: `${completedRequests.reduce((sum, r) => sum + (r.quantity || 0), 0)} items saved`,
+    thisMonthListings: completedRequests.filter(r => {
+      const createdDate = new Date(r.createdAt);
       const now = new Date();
       const isThisMonth = createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
-      if (myListings.indexOf(l) === 0) {
-        console.log('🗓️ This Month Check:', {
-          createdDate: createdDate.toISOString(),
-          now: now.toISOString(),
-          createdMonth: createdDate.getMonth(),
-          currentMonth: now.getMonth(),
-          isThisMonth
-        });
-      }
       return isThisMonth;
     }),
-    thisMonth: allListings.filter(l => {
-      const createdDate = new Date(l.createdAt);
+    thisMonth: completedRequests.filter(r => {
+      const createdDate = new Date(r.createdAt);
       const now = new Date();
       return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
     }).length,
-    thisWeekListings: allListings.filter(l => {
-      const createdDate = new Date(l.createdAt);
+    thisWeekListings: completedRequests.filter(r => {
+      const createdDate = new Date(r.createdAt);
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       const isThisWeek = createdDate >= oneWeekAgo;
-      if (myListings.indexOf(l) === 0) {
-        console.log('📅 This Week Check:', {
-          createdDate: createdDate.toISOString(),
-          oneWeekAgo: oneWeekAgo.toISOString(),
-          now: new Date().toISOString(),
-          isThisWeek
-        });
-      }
       return isThisWeek;
     }),
-    thisWeek: allListings.filter(l => {
-      const createdDate = new Date(l.createdAt);
+    thisWeek: completedRequests.filter(r => {
+      const createdDate = new Date(r.createdAt);
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       return createdDate >= oneWeekAgo;
     }).length,
   };
 
-  // Calculate impact quantities for each period
-  const thisWeekImpact = stats.thisWeekListings.reduce((sum, l) => sum + (l.quantity || 0), 0);
-  const thisMonthImpact = stats.thisMonthListings.reduce((sum, l) => sum + (l.quantity || 0), 0);
+  // Calculate impact quantities for each period (based on completed requests)
+  const thisWeekImpact = stats.thisWeekListings.reduce((sum, r) => sum + (r.quantity || 0), 0);
+  const thisMonthImpact = stats.thisMonthListings.reduce((sum, r) => sum + (r.quantity || 0), 0);
   const allTimeImpact = stats.totalImpactItems;
 
   // Calculate percentages for progress bars (relative to max)
@@ -108,9 +93,22 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
 
   // Load data on mount
   useEffect(() => {
+    loadRestaurantProfile();
     loadMyListings();
     loadPendingRequests();
+    loadCompletedRequests();
   }, []);
+
+  // Fetch restaurant profile
+  const loadRestaurantProfile = async () => {
+    try {
+      const response: any = await authAPI.getRestaurantProfile();
+      const profile = response.data || response;
+      setRestaurantProfile(profile);
+    } catch (error) {
+      console.error('Error loading restaurant profile:', error);
+    }
+  };
 
   // Filter listings by category
   useEffect(() => {
@@ -125,6 +123,12 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
 
   // Handle create/update listing
   const handleSaveListing = async () => {
+    // Check if restaurant is verified
+    if (!restaurantProfile?.isVerified) {
+      toast.error('Your restaurant needs to be verified before you can create listings.');
+      return;
+    }
+
     setIsLoading(true);
     setFieldErrors({});
 
@@ -268,6 +272,27 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
     }
   };
 
+  // Load completed requests for impact calculation
+  const loadCompletedRequests = async () => {
+    try {
+      const response = await requestAPI.getRestaurantRequests('COMPLETED');
+      const requests = response.data || response || [];
+      setCompletedRequests(requests);
+      console.log('✅ Completed Requests Loaded:', {
+        count: requests.length,
+        totalQuantity: requests.reduce((sum: number, r: any) => sum + (r.quantity || 0), 0),
+        requests: requests.map((r: any) => ({
+          id: r.id,
+          quantity: r.quantity,
+          foodTitle: r.foodListing?.title,
+          completedAt: r.updatedAt
+        }))
+      });
+    } catch (err: any) {
+      console.error('Error loading completed requests:', err);
+    }
+  };
+
   // Confirm delete listing
   const confirmDeleteListing = async () => {
     setIsLoading(true);
@@ -316,7 +341,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
     try {
       await requestAPI.updateRequestStatus(id, 'COMPLETED');
       toast.success('Request marked as completed!');
-      await loadPendingRequests();
+      await Promise.all([loadPendingRequests(), loadCompletedRequests(), loadMyListings()]);
     } catch (err: any) {
       toast.error(err.message || 'Failed to complete request');
     } finally {
@@ -331,15 +356,61 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
         <div className="mb-8 bg-white rounded-3xl p-8 shadow-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-extrabold text-gray-900 mb-2">{restaurantName}</h1>
+              <h1 className="text-4xl font-extrabold text-gray-900 mb-2 flex items-center gap-3">
+                {restaurantName}
+                {restaurantProfile?.isVerified && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-700 border border-emerald-300">
+                    <ShieldCheck size={16} className="mr-1" />
+                    Verified
+                  </span>
+                )}
+              </h1>
               <p className="text-lg text-gray-600">Manage your donations and make an impact</p>
             </div>
-            <Button className="hidden md:flex items-center" onClick={() => setShowNewListingModal(true)}>
+            <Button
+              className="hidden md:flex items-center"
+              onClick={() => setShowNewListingModal(true)}
+              disabled={!restaurantProfile?.isVerified}
+            >
               <Plus size={20} className="mr-2" />
               <span>New Listing</span>
             </Button>
           </div>
         </div>
+
+        {/* Verification Status Banner */}
+        {restaurantProfile && !restaurantProfile.isVerified && (
+          <div className="mb-6 bg-amber-50 border-l-4 border-amber-500 rounded-lg p-6 shadow-md">
+            <div className="flex items-start">
+              <AlertCircle className="text-amber-600 mr-3 mt-0.5 shrink-0" size={24} />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-amber-900 mb-2">
+                  Account Verification Pending
+                </h3>
+                <p className="text-amber-800 mb-3">
+                  Your restaurant account is currently under review by our admin team. You'll be able to create food listings once your account is verified.
+                </p>
+                <div className="bg-white rounded-lg p-4 border border-amber-200">
+                  <p className="text-sm text-gray-700 mb-2 font-medium">What happens next?</p>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li className="flex items-start">
+                      <span className="text-amber-500 mr-2">•</span>
+                      <span>Our admin team will review your restaurant information</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-amber-500 mr-2">•</span>
+                      <span>You'll receive a notification once your account is verified</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-amber-500 mr-2">•</span>
+                      <span>Verification typically takes 24-48 hours</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex space-x-2 mb-6 bg-white p-2 rounded-2xl shadow-md flex-wrap">
@@ -708,9 +779,12 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
                       ? 'No listings yet'
                       : `No ${getCategoryLabel(selectedCategory as FoodCategory)} listings found`}
                   </p>
-                  <Button onClick={() => setShowNewListingModal(true)}>
+                  <Button
+                    onClick={() => setShowNewListingModal(true)}
+                    disabled={!restaurantProfile?.isVerified}
+                  >
                     <Plus size={20} className="mr-2" />
-                    Create Your First Listing
+                    {restaurantProfile?.isVerified ? 'Create Your First Listing' : 'Verification Required'}
                   </Button>
                 </div>
               )}
@@ -1285,13 +1359,15 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
         />
 
         {/* Floating Action Button for Mobile */}
-        <button
-          onClick={() => setShowNewListingModal(true)}
-          className="md:hidden fixed bottom-6 right-6 bg-linear-to-r from-emerald-600 to-teal-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all z-50"
-          aria-label="Add new listing"
-        >
-          <Plus size={28} />
-        </button>
+        {restaurantProfile?.isVerified && (
+          <button
+            onClick={() => setShowNewListingModal(true)}
+            className="md:hidden fixed bottom-6 right-6 bg-linear-to-r from-emerald-600 to-teal-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl transition-all z-50"
+            aria-label="Add new listing"
+          >
+            <Plus size={28} />
+          </button>
+        )}
       </div>
     </div>
   );

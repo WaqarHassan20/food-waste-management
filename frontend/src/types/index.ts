@@ -120,13 +120,29 @@ export interface FoodRequest {
   };
 }
 
+export type NotificationType =
+  | 'REQUEST_CREATED'
+  | 'REQUEST_APPROVED'
+  | 'REQUEST_REJECTED'
+  | 'REQUEST_CANCELLED'
+  | 'REQUEST_COMPLETED'
+  | 'NEW_FOOD_AVAILABLE'
+  | 'LISTING_EXPIRING_SOON'
+  | 'RESTAURANT_VERIFIED'
+  | 'RESTAURANT_UNVERIFIED'
+  | 'USER_VERIFIED'
+  | 'SYSTEM_ANNOUNCEMENT';
+
 export interface Notification {
   id: string;
-  userId: string;
+  userId?: string;
+  restaurantId?: string;
   title: string;
   message: string;
   isRead: boolean;
-  type: string;
+  type: NotificationType;
+  metadata?: any;
+  actionUrl?: string;
   createdAt: string;
 }
 

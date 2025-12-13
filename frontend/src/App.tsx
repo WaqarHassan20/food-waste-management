@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Navbar, Footer } from './components';
-import { HomePage, AuthPage, FoodBrowsePage, UserDashboard, RestaurantDashboard, AdminDashboard } from './pages';
+import { HomePage, AuthPage, UserDashboard, RestaurantDashboard, AdminDashboard } from './pages';
+import NotificationsPage from './pages/NotificationsPage';
 import type { UserRole } from './types';
 
 interface AuthState {
@@ -43,6 +44,7 @@ function RoleRoute({
 // Main App Content Component
 function AppContent() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     userRole: null,
@@ -50,6 +52,9 @@ function AppContent() {
     token: null,
     userId: null,
   });
+
+  // Check if current route is an auth page
+  const isAuthPage = location.pathname.startsWith('/auth');
 
   // Check for existing auth on mount
   useEffect(() => {
@@ -102,19 +107,20 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar
-        isAuthenticated={authState.isAuthenticated}
-        userRole={authState.userRole}
-        userName={authState.userName}
-        onLogout={handleLogout}
-      />
+      {!isAuthPage && (
+        <Navbar
+          isAuthenticated={authState.isAuthenticated}
+          userRole={authState.userRole}
+          userName={authState.userName}
+          onLogout={handleLogout}
+        />
+      )}
       <main className="grow">
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/browse" element={<FoodBrowsePage />} />
 
-          {/* Auth Routes */}
+          {/* Auth Routes - Generic */}
           <Route
             path="/auth/signin"
             element={
@@ -136,6 +142,70 @@ function AppContent() {
             }
           />
 
+          {/* Auth Routes - Sign In with Role */}
+          <Route
+            path="/auth/signin/user"
+            element={
+              authState.isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <AuthPage onLogin={handleLogin} initialMode="signin" initialRole="USER" />
+              )
+            }
+          />
+          <Route
+            path="/auth/signin/restaurant"
+            element={
+              authState.isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <AuthPage onLogin={handleLogin} initialMode="signin" initialRole="RESTAURANT" />
+              )
+            }
+          />
+          <Route
+            path="/auth/signin/admin"
+            element={
+              authState.isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <AuthPage onLogin={handleLogin} initialMode="signin" initialRole="ADMIN" />
+              )
+            }
+          />
+
+          {/* Auth Routes - Sign Up with Role */}
+          <Route
+            path="/auth/signup/user"
+            element={
+              authState.isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <AuthPage onLogin={handleLogin} initialMode="signup" initialRole="USER" />
+              )
+            }
+          />
+          <Route
+            path="/auth/signup/restaurant"
+            element={
+              authState.isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <AuthPage onLogin={handleLogin} initialMode="signup" initialRole="RESTAURANT" />
+              )
+            }
+          />
+          <Route
+            path="/auth/signup/admin"
+            element={
+              authState.isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <AuthPage onLogin={handleLogin} initialMode="signup" initialRole="ADMIN" />
+              )
+            }
+          />
+
           {/* Protected Dashboard Routes */}
           <Route
             path="/dashboard"
@@ -151,6 +221,16 @@ function AppContent() {
                   <AdminDashboard />
                 )}
                 {!authState.userRole && <Navigate to="/" replace />}
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Notifications Page - Protected */}
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute isAuthenticated={authState.isAuthenticated}>
+                <NotificationsPage />
               </ProtectedRoute>
             }
           />
@@ -199,7 +279,7 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      <Footer />
+      {!isAuthPage && <Footer />}
     </div>
   );
 }
