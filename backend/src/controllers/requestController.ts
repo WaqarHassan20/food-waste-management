@@ -2,6 +2,7 @@ import { successResponse, errorResponse } from '../utils/response';
 import type { AuthRequest } from '../middleware/auth';
 import type { Response } from 'express';
 import { prisma } from '../db';
+import { NotificationService } from '../services/notificationService';
 
 export const createFoodRequest = async (
   req: AuthRequest,
@@ -110,10 +111,13 @@ export const createFoodRequest = async (
     });
 
     // Create notification for restaurant
-    // Note: Since restaurants are now separate, we may need to implement a separate notification system
-    // For now, we'll log this
-    console.log(
-      `Food request created: ${result.user.name} requested ${quantity} ${foodListing.unit} of ${foodListing.title} from ${foodListing.restaurant.restaurantName}`
+    await NotificationService.notifyRestaurantNewRequest(
+      foodListing.restaurant.id,
+      result.user.name,
+      foodListing.title,
+      quantity,
+      foodListing.unit,
+      result.id
     );
 
     return successResponse(
@@ -255,7 +259,11 @@ export const updateFoodRequestStatus = async (
     const foodRequest = await prisma.foodRequest.findUnique({
       where: { id },
       include: {
-        foodListing: true,
+        foodListing: {
+          include: {
+            restaurant: true,
+          },
+        },
         user: true,
       },
     });
@@ -288,6 +296,26 @@ export const updateFoodRequestStatus = async (
         });
       }
 
+      // If approving, mark the food listing as RESERVED/CLAIMED
+      if (status === 'APPROVED' && foodRequest.status === 'PENDING') {
+        await tx.foodListing.update({
+          where: { id: foodRequest.foodListingId },
+          data: {
+            status: 'RESERVED', // Reserve the food for this user
+          },
+        });
+      }
+
+      // If completing (picked up), mark the food listing as CLAIMED
+      if (status === 'COMPLETED' && foodRequest.status === 'APPROVED') {
+        await tx.foodListing.update({
+          where: { id: foodRequest.foodListingId },
+          data: {
+            status: 'CLAIMED', // Food has been picked up
+          },
+        });
+      }
+
       // Update food request
       const updated = await tx.foodRequest.update({
         where: { id },
@@ -311,15 +339,30 @@ export const updateFoodRequestStatus = async (
       return updated;
     });
 
-    // Create notification for user
-    await prisma.notification.create({
-      data: {
-        userId: foodRequest.userId,
-        title: `Food Request ${status}`,
-        message: `Your request for ${foodRequest.foodListing.title} has been ${status.toLowerCase()}`,
-        type: `request_${status.toLowerCase()}`,
-      },
-    });
+    // Create appropriate notification for user based on status
+    if (status === 'APPROVED') {
+      await NotificationService.notifyUserRequestApproved(
+        foodRequest.userId,
+        foodRequest.foodListing.restaurant.restaurantName,
+        foodRequest.foodListing.title,
+        pickupDate,
+        foodRequest.id
+      );
+    } else if (status === 'REJECTED') {
+      await NotificationService.notifyUserRequestRejected(
+        foodRequest.userId,
+        foodRequest.foodListing.restaurant.restaurantName,
+        foodRequest.foodListing.title,
+        foodRequest.id
+      );
+    } else if (status === 'COMPLETED') {
+      await NotificationService.notifyUserRequestCompleted(
+        foodRequest.userId,
+        foodRequest.foodListing.restaurant.restaurantName,
+        foodRequest.foodListing.title,
+        foodRequest.id
+      );
+    }
 
     return successResponse(
       res,
@@ -344,7 +387,12 @@ export const cancelFoodRequest = async (
     const foodRequest = await prisma.foodRequest.findUnique({
       where: { id },
       include: {
-        foodListing: true,
+        foodListing: {
+          include: {
+            restaurant: true,
+          },
+        },
+        user: true,
       },
     });
 
@@ -391,6 +439,14 @@ export const cancelFoodRequest = async (
 
       return updatedRequest;
     });
+
+    // Notify restaurant about the cancellation
+    await NotificationService.notifyRestaurantRequestCancelled(
+      foodRequest.foodListing.restaurant.id,
+      foodRequest.user.name,
+      foodRequest.foodListing.title,
+      foodRequest.id
+    );
 
     return successResponse(
       res,

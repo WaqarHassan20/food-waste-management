@@ -1,6 +1,32 @@
 export type UserRole = 'USER' | 'RESTAURANT' | 'ADMIN';
 export type FoodStatus = 'AVAILABLE' | 'RESERVED' | 'CLAIMED' | 'EXPIRED';
 export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
+export type FoodCategory =
+  | 'PREPARED_FOOD'
+  | 'RAW_INGREDIENTS'
+  | 'BAKERY'
+  | 'DAIRY'
+  | 'FRUITS_VEGETABLES'
+  | 'BEVERAGES'
+  | 'PACKAGED_FOOD'
+  | 'FROZEN_FOOD'
+  | 'OTHER';
+
+// Helper function to get human-readable category names
+export const getCategoryLabel = (category: FoodCategory): string => {
+  const labels: Record<FoodCategory, string> = {
+    PREPARED_FOOD: 'Prepared Food',
+    RAW_INGREDIENTS: 'Raw Ingredients',
+    BAKERY: 'Bakery Items',
+    DAIRY: 'Dairy Products',
+    FRUITS_VEGETABLES: 'Fruits & Vegetables',
+    BEVERAGES: 'Beverages',
+    PACKAGED_FOOD: 'Packaged Food',
+    FROZEN_FOOD: 'Frozen Food',
+    OTHER: 'Other',
+  };
+  return labels[category] || category;
+};
 
 export interface User {
   id: string;
@@ -49,8 +75,10 @@ export interface FoodListing {
   expiryDate: string;
   pickupTime: string;
   status: FoodStatus;
-  imageUrl?: string;
-  category?: string;
+  imageData?: any; // Binary data indicating image exists
+  imageMimeType?: string;
+  imageUrl?: string; // URL to external image
+  category: FoodCategory;
   createdAt: string;
   updatedAt: string;
   restaurant?: {
@@ -92,13 +120,29 @@ export interface FoodRequest {
   };
 }
 
+export type NotificationType =
+  | 'REQUEST_CREATED'
+  | 'REQUEST_APPROVED'
+  | 'REQUEST_REJECTED'
+  | 'REQUEST_CANCELLED'
+  | 'REQUEST_COMPLETED'
+  | 'NEW_FOOD_AVAILABLE'
+  | 'LISTING_EXPIRING_SOON'
+  | 'RESTAURANT_VERIFIED'
+  | 'RESTAURANT_UNVERIFIED'
+  | 'USER_VERIFIED'
+  | 'SYSTEM_ANNOUNCEMENT';
+
 export interface Notification {
   id: string;
-  userId: string;
+  userId?: string;
+  restaurantId?: string;
   title: string;
   message: string;
   isRead: boolean;
-  type: string;
+  type: NotificationType;
+  metadata?: any;
+  actionUrl?: string;
   createdAt: string;
 }
 
@@ -130,7 +174,6 @@ export interface DashboardStats {
   totalRequests: number;
   pendingRequests: number;
   approvedRequests: number;
-}
   read: boolean;
   createdAt: string;
 }

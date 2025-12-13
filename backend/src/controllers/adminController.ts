@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import { successResponse, errorResponse } from '../utils/response';
 import type { AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
+import { NotificationService } from '../services/notificationService';
 
 export const getAllUsers = async (
   req: AuthRequest,
@@ -192,8 +193,28 @@ export const verifyRestaurant = async (
       data: { isVerified },
     });
 
-    // Note: Restaurants have separate authentication and don't use the user notification system
-    // Consider implementing a separate restaurant notification system if needed
+    // Notify restaurant about verification status change
+    if (isVerified) {
+      try {
+        await NotificationService.notifyRestaurantVerified(
+          restaurant.id,
+          restaurant.restaurantName
+        );
+      } catch (notifError) {
+        console.error('Failed to send verification notification:', notifError);
+        // Don't fail the verification if notification fails
+      }
+    } else {
+      try {
+        await NotificationService.notifyRestaurantUnverified(
+          restaurant.id,
+          restaurant.restaurantName
+        );
+      } catch (notifError) {
+        console.error('Failed to send unverification notification:', notifError);
+        // Don't fail the operation if notification fails
+      }
+    }
 
     return successResponse(
       res,
@@ -335,6 +356,75 @@ export const getAllFoodRequests = async (
   } catch (error) {
     console.error('Get all food requests error:', error);
     return errorResponse(res, 'Failed to fetch food requests', 500, error);
+  }
+};
+
+export const getAllRestaurants = async (
+  req: AuthRequest,
+  res: Response
+): Promise<Response> => {
+  try {
+    const { page = 1, limit = 10, search } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { restaurantName: { contains: search as string, mode: 'insensitive' } },
+        { email: { contains: search as string, mode: 'insensitive' } },
+        { address: { contains: search as string, mode: 'insensitive' } },
+      ];
+    }
+
+    const [restaurants, total] = await Promise.all([
+      prisma.restaurant.findMany({
+        where,
+        skip,
+        take: Number(limit),
+        select: {
+          id: true,
+          email: true,
+          restaurantName: true,
+          description: true,
+          address: true,
+          phone: true,
+          latitude: true,
+          longitude: true,
+          rating: true,
+          businessLicense: true,
+          isVerified: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              foodListings: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.restaurant.count({ where }),
+    ]);
+
+    return successResponse(
+      res,
+      {
+        restaurants,
+        pagination: {
+          total,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: Math.ceil(total / Number(limit)),
+        },
+      },
+      'Restaurants fetched successfully'
+    );
+  } catch (error) {
+    console.error('Get all restaurants error:', error);
+    return errorResponse(res, 'Failed to fetch restaurants', 500, error);
   }
 };
 
