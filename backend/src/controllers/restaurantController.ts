@@ -3,71 +3,8 @@ import type { AuthRequest } from '../middleware/auth';
 import type { Response } from 'express';
 import { prisma } from '../db';
 
-export const createRestaurant = async (
-  req: AuthRequest,
-  res: Response
-): Promise<Response> => {
-  try {
-    const userId = req.user!.userId;
-    const {
-      restaurantName,
-      description,
-      address,
-      latitude,
-      longitude,
-      phone,
-      businessLicense,
-    } = req.body;
-
-    // Check if user already has a restaurant
-    const existingRestaurant = await prisma.restaurant.findUnique({
-      where: { userId },
-    });
-
-    if (existingRestaurant) {
-      return errorResponse(res, 'Restaurant profile already exists for this user', 409);
-    }
-
-    // Update user role to RESTAURANT
-    await prisma.user.update({
-      where: { id: userId },
-      data: { role: 'RESTAURANT' },
-    });
-
-    // Create restaurant
-    const restaurant = await prisma.restaurant.create({
-      data: {
-        userId,
-        restaurantName,
-        description,
-        address,
-        latitude,
-        longitude,
-        phone,
-        businessLicense,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    return successResponse(
-      res,
-      restaurant,
-      'Restaurant created successfully',
-      201
-    );
-  } catch (error) {
-    console.error('Create restaurant error:', error);
-    return errorResponse(res, 'Failed to create restaurant', 500, error);
-  }
-};
+// Note: Restaurant creation happens through restaurantRegister in authController
+// This controller handles restaurant profile management and retrieval
 
 export const getRestaurant = async (
   req: AuthRequest,
@@ -78,14 +15,20 @@ export const getRestaurant = async (
 
     const restaurant = await prisma.restaurant.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          },
-        },
+      select: {
+        id: true,
+        email: true,
+        restaurantName: true,
+        description: true,
+        address: true,
+        phone: true,
+        latitude: true,
+        longitude: true,
+        businessLicense: true,
+        rating: true,
+        totalRatings: true,
+        isVerified: true,
+        createdAt: true,
         foodListings: {
           where: {
             status: 'AVAILABLE',
@@ -133,13 +76,6 @@ export const getAllRestaurants = async (
         skip,
         take: Number(limit),
         include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
           _count: {
             select: {
               foodListings: true,
@@ -177,7 +113,17 @@ export const updateRestaurant = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const userId = req.user!.userId;
+    const restaurantId = req.user!.restaurantId;
+
+    // Validate that the token is from a restaurant
+    if (!restaurantId || req.user!.type !== 'restaurant') {
+      return errorResponse(
+        res,
+        'Only restaurants can update their profile',
+        403
+      );
+    }
+
     const {
       restaurantName,
       description,
@@ -188,16 +134,8 @@ export const updateRestaurant = async (
       businessLicense,
     } = req.body;
 
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { userId },
-    });
-
-    if (!restaurant) {
-      return errorResponse(res, 'Restaurant not found', 404);
-    }
-
     const updatedRestaurant = await prisma.restaurant.update({
-      where: { userId },
+      where: { id: restaurantId },
       data: {
         ...(restaurantName && { restaurantName }),
         ...(description && { description }),
@@ -225,10 +163,19 @@ export const getMyRestaurant = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const userId = req.user!.userId;
+    const restaurantId = req.user!.restaurantId;
+
+    // Validate that the token is from a restaurant
+    if (!restaurantId || req.user!.type !== 'restaurant') {
+      return errorResponse(
+        res,
+        'Only restaurants can view their profile',
+        403
+      );
+    }
 
     const restaurant = await prisma.restaurant.findUnique({
-      where: { userId },
+      where: { id: restaurantId },
       include: {
         foodListings: {
           orderBy: {

@@ -9,6 +9,16 @@ export const createFoodRequest = async (
 ): Promise<Response> => {
   try {
     const userId = req.user!.userId;
+
+    // Only users can create food requests
+    if (req.user!.type !== 'user') {
+      return errorResponse(
+        res,
+        'Only users can request food',
+        403
+      );
+    }
+
     const { foodListingId, quantity, message } = req.body;
 
     // Check if food listing exists and is available
@@ -48,51 +58,67 @@ export const createFoodRequest = async (
       );
     }
 
-    // Create food request
-    const foodRequest = await prisma.foodRequest.create({
-      data: {
-        userId,
-        foodListingId,
-        quantity,
-        message,
-      },
-      include: {
-        foodListing: {
-          include: {
-            restaurant: {
-              select: {
-                id: true,
-                restaurantName: true,
-                address: true,
-                phone: true,
+    // Create food request and update food listing in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Calculate new quantity
+      const newQuantity = foodListing.quantity - quantity;
+      const newStatus = newQuantity <= 0 ? 'RESERVED' : 'AVAILABLE';
+
+      // Update food listing quantity and status
+      await tx.foodListing.update({
+        where: { id: foodListingId },
+        data: {
+          quantity: newQuantity,
+          status: newStatus,
+        },
+      });
+
+      // Create food request
+      const foodRequest = await tx.foodRequest.create({
+        data: {
+          userId: userId!,
+          foodListingId,
+          quantity,
+          message,
+        },
+        include: {
+          foodListing: {
+            include: {
+              restaurant: {
+                select: {
+                  id: true,
+                  restaurantName: true,
+                  address: true,
+                  phone: true,
+                  email: true,
+                },
               },
             },
           },
-        },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
           },
         },
-      },
+      });
+
+      return foodRequest;
     });
 
-    // Create notification for restaurant owner
-    await prisma.notification.create({
-      data: {
-        userId: foodListing.restaurant.userId,
-        title: 'New Food Request',
-        message: `${foodRequest.user.name} has requested ${quantity} ${foodListing.unit} of ${foodListing.title}`,
-        type: 'new_food_request',
-      },
-    });
+    // Create notification for restaurant
+    // Note: Since restaurants are now separate, we may need to implement a separate notification system
+    // For now, we'll log this
+    console.log(
+      `Food request created: ${result.user.name} requested ${quantity} ${foodListing.unit} of ${foodListing.title} from ${foodListing.restaurant.restaurantName}`
+    );
 
     return successResponse(
       res,
-      foodRequest,
+      result,
       'Food request created successfully',
       201
     );
@@ -153,21 +179,22 @@ export const getRestaurantFoodRequests = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const userId = req.user!.userId;
-    const { status } = req.query;
+    const restaurantId = req.user!.restaurantId;
 
-    // Get restaurant
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { userId },
-    });
-
-    if (!restaurant) {
-      return errorResponse(res, 'Restaurant not found', 404);
+    // Validate that the token is from a restaurant
+    if (!restaurantId || req.user!.type !== 'restaurant') {
+      return errorResponse(
+        res,
+        'Only restaurants can view food requests',
+        403
+      );
     }
+
+    const { status } = req.query;
 
     const where: any = {
       foodListing: {
-        restaurantId: restaurant.id,
+        restaurantId,
       },
     };
 
@@ -210,18 +237,19 @@ export const updateFoodRequestStatus = async (
   res: Response
 ): Promise<Response> => {
   try {
-    const userId = req.user!.userId;
+    const restaurantId = req.user!.restaurantId;
+
+    // Validate that the token is from a restaurant
+    if (!restaurantId || req.user!.type !== 'restaurant') {
+      return errorResponse(
+        res,
+        'Only restaurants can update food requests',
+        403
+      );
+    }
+
     const { id } = req.params;
     const { status, pickupDate } = req.body;
-
-    // Get restaurant
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { userId },
-    });
-
-    if (!restaurant) {
-      return errorResponse(res, 'Restaurant not found', 403);
-    }
 
     // Get food request with food listing
     const foodRequest = await prisma.foodRequest.findUnique({
@@ -237,7 +265,7 @@ export const updateFoodRequestStatus = async (
     }
 
     // Check if food listing belongs to this restaurant
-    if (foodRequest.foodListing.restaurantId !== restaurant.id) {
+    if (foodRequest.foodListing.restaurantId !== restaurantId) {
       return errorResponse(
         res,
         'You do not have permission to update this request',
@@ -245,38 +273,43 @@ export const updateFoodRequestStatus = async (
       );
     }
 
-    // Update food request
-    const updatedFoodRequest = await prisma.foodRequest.update({
-      where: { id },
-      data: {
-        status,
-        ...(pickupDate && { pickupDate: new Date(pickupDate) }),
-      },
-      include: {
-        foodListing: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
+    // Update food request and handle quantity restoration if rejected
+    const updatedFoodRequest = await prisma.$transaction(async (tx) => {
+      // If rejecting, restore the quantity back to food listing
+      if (status === 'REJECTED' && foodRequest.status === 'PENDING') {
+        const newQuantity = foodRequest.foodListing.quantity + foodRequest.quantity;
+
+        await tx.foodListing.update({
+          where: { id: foodRequest.foodListingId },
+          data: {
+            quantity: newQuantity,
+            status: 'AVAILABLE', // Make it available again
+          },
+        });
+      }
+
+      // Update food request
+      const updated = await tx.foodRequest.update({
+        where: { id },
+        data: {
+          status,
+          ...(pickupDate && { pickupDate: new Date(pickupDate) }),
+        },
+        include: {
+          foodListing: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
           },
         },
-      },
-    });
-
-    // If approved, update food listing quantity
-    if (status === 'APPROVED') {
-      const newQuantity = foodRequest.foodListing.quantity - foodRequest.quantity;
-
-      await prisma.foodListing.update({
-        where: { id: foodRequest.foodListingId },
-        data: {
-          quantity: newQuantity,
-          status: newQuantity <= 0 ? 'RESERVED' : 'AVAILABLE',
-        },
       });
-    }
+
+      return updated;
+    });
 
     // Create notification for user
     await prisma.notification.create({
@@ -337,15 +370,31 @@ export const cancelFoodRequest = async (
       );
     }
 
-    // Update request status
-    const updatedRequest = await prisma.foodRequest.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
+    // Update request status and restore food listing quantity in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Restore the quantity back to food listing
+      const newQuantity = foodRequest.foodListing.quantity + foodRequest.quantity;
+
+      await tx.foodListing.update({
+        where: { id: foodRequest.foodListingId },
+        data: {
+          quantity: newQuantity,
+          status: 'AVAILABLE', // Make it available again
+        },
+      });
+
+      // Update request status
+      const updatedRequest = await tx.foodRequest.update({
+        where: { id },
+        data: { status: 'CANCELLED' },
+      });
+
+      return updatedRequest;
     });
 
     return successResponse(
       res,
-      updatedRequest,
+      result,
       'Food request cancelled successfully'
     );
   } catch (error) {

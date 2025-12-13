@@ -7,7 +7,7 @@ import {
   cancelFoodRequest,
 } from '../controllers/requestController';
 import { authenticate, authorize } from '../middleware/auth';
-import { validateFoodRequest } from '../middleware/validation';
+import { validateFoodRequest, validateRequestStatusUpdate } from '../middleware/zodValidation';
 
 const requestRouter = Router();
 
@@ -33,6 +33,7 @@ requestRouter.put(
   '/:id/status',
   authenticate,
   authorize('RESTAURANT'),
+  validateRequestStatusUpdate,
   updateFoodRequestStatus
 );
 

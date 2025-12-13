@@ -1,8 +1,10 @@
 import { PrismaClient } from './generated/prisma';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 
-const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_VSmn0DsF1BLq@ep-misty-sea-aduj1nkg.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require';
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:mysecretpassword@localhost:5432/food_waste_db';
 
-export const prisma = new PrismaClient({
-  datasourceUrl: databaseUrl,
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
+const pool = new pg.Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+
+export const prisma = new PrismaClient({ adapter });

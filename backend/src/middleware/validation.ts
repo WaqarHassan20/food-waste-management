@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { errorResponse } from '../utils/response';
 import { validateEmail, validatePassword, validatePhone } from '../utils/validators';
 
@@ -101,6 +101,37 @@ export const validateRestaurant = (
 
   if (!restaurantName || !address || !phone) {
     return errorResponse(res, 'Restaurant name, address, and phone are required', 400);
+  }
+
+  if (!validatePhone(phone)) {
+    return errorResponse(res, 'Invalid phone number format', 400);
+  }
+
+  next();
+};
+
+export const validateRestaurantRegistration = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void | Response => {
+  const { email, password, restaurantName, address, phone } = req.body;
+
+  if (!email || !password || !restaurantName) {
+    return errorResponse(res, 'Email, password, and restaurant name are required', 400);
+  }
+
+  if (!validateEmail(email)) {
+    return errorResponse(res, 'Invalid email format', 400);
+  }
+
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.isValid) {
+    return errorResponse(res, passwordValidation.message!, 400);
+  }
+
+  if (!address || !phone) {
+    return errorResponse(res, 'Address and phone are required', 400);
   }
 
   if (!validatePhone(phone)) {

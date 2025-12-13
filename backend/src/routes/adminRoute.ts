@@ -5,6 +5,7 @@ import {
   updateUserStatus,
   deleteUser,
   verifyRestaurant,
+  deleteRestaurant,
   getDashboardStats,
   getAllFoodRequests,
 } from '../controllers/adminController';
@@ -26,6 +27,7 @@ adminRouter.delete('/users/:id', deleteUser);
 
 // Restaurant verification
 adminRouter.put('/restaurants/:id/verify', verifyRestaurant);
+adminRouter.delete('/restaurants/:id', deleteRestaurant);
 
 // Food requests
 adminRouter.get('/requests', getAllFoodRequests);
