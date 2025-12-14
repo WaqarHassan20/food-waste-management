@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Navbar, Footer } from './components';
+import { Loader } from './components/ui';
 import { HomePage, AuthPage, UserDashboard, RestaurantDashboard, AdminDashboard } from './pages';
 import NotificationsPage from './pages/NotificationsPage';
 import type { UserRole } from './types';
@@ -45,6 +46,7 @@ function RoleRoute({
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isInitializing, setIsInitializing] = useState(true);
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     userRole: null,
@@ -77,6 +79,8 @@ function AppContent() {
         localStorage.removeItem('user');
       }
     }
+    // Set a small delay for better UX
+    setTimeout(() => setIsInitializing(false), 500);
   }, []);
 
   const handleLogin = (role: UserRole, name: string, token: string, userId: string) => {
@@ -104,6 +108,22 @@ function AppContent() {
     });
     navigate('/');
   };
+
+  // Show loading screen during initialization
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-green-50 to-emerald-50">
+        <div className="text-center">
+          <div className="mb-8">
+            <div className="text-6xl mb-4">🍴</div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Food Waste Management</h1>
+            <p className="text-gray-600">Connecting communities, reducing waste</p>
+          </div>
+          <Loader size="lg" variant="spinner" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

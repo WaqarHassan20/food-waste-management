@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Badge, ToastContainer, ConfirmDialog } from '../components/ui';
+import { Card, Button, Badge, ToastContainer, ConfirmDialog, Loader } from '../components/ui';
 import { Search, Users, Clock, MapPin, Package, CheckCircle, ShoppingBag } from 'lucide-react';
 import { foodAPI, requestAPI } from '../services/api';
 import type { FoodListing, FoodRequest } from '../types';
@@ -210,8 +210,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="text-gray-600">Loading...</div>
+          <div className="py-12">
+            <Loader size="lg" variant="spinner" text="Loading your dashboard..." />
           </div>
         ) : (
           <>

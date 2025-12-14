@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Badge, ToastContainer, ConfirmDialog } from '../components/ui';
+import { Card, Button, Badge, ToastContainer, ConfirmDialog, Loader } from '../components/ui';
 import { BarChart3, Users, UtensilsCrossed, Trash2 } from 'lucide-react';
 import { adminAPI, foodAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
@@ -215,7 +215,7 @@ export const AdminDashboard: React.FC = () => {
             <Card>
               <div className="p-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">📋 Recent Listings</h3>
-                {loading ? (<div className="text-center py-8 text-gray-600">Loading...</div>) : recentListings.length === 0 ? (<div className="text-center py-8 text-gray-600">No recent listings</div>) : (
+                {loading ? (<div className="py-8"><Loader size="md" variant="pulse" text="Loading listings..." /></div>) : recentListings.length === 0 ? (<div className="text-center py-8 text-gray-600">No recent listings</div>) : (
                   <div className="space-y-4">{recentListings.map((listing: any) => (<div key={listing.id} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition"><div className="flex-1"><div className="flex justify-between items-start mb-2"><div><p className="text-gray-900 font-bold text-lg">{listing.title}</p><p className="text-sm text-gray-600">{listing.restaurant?.restaurantName}</p></div><Badge variant={listing.status === 'AVAILABLE' ? 'success' : 'warning'}>{listing.status}</Badge></div><p className="text-sm text-gray-700">{listing.description}</p><div className="flex items-center space-x-4 mt-2 text-sm text-gray-600"><span>📦 {listing.quantity} {listing.unit}</span><span>⏰ Expires: {new Date(listing.expiryDate).toLocaleDateString()}</span><span>📅 Listed: {new Date(listing.createdAt).toLocaleDateString()}</span></div></div></div>))}</div>
                 )}
               </div>
@@ -264,7 +264,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               {loading ? (
-                <div className="text-center py-12 text-gray-600">Loading...</div>
+                <div className="py-12"><Loader size="lg" variant="spinner" text="Loading users..." /></div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -340,22 +340,22 @@ export const AdminDashboard: React.FC = () => {
                               </td>
                               <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                 <div className="flex flex-col sm:flex-row gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors w-full sm:w-auto"
-                                  onClick={() => handleToggleUserStatus(user.id, user.isActive)}
-                                >
-                                  {user.isActive ? 'Suspend' : 'Activate'}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto"
-                                  onClick={() => handleDeleteUser(user.id, user.name)}
-                                >
-                                  <Trash2 size={16} />
-                                </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors w-full sm:w-auto"
+                                    onClick={() => handleToggleUserStatus(user.id, user.isActive)}
+                                  >
+                                    {user.isActive ? 'Suspend' : 'Activate'}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto"
+                                    onClick={() => handleDeleteUser(user.id, user.name)}
+                                  >
+                                    <Trash2 size={16} />
+                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -410,7 +410,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
               {loading ? (
-                <div className="text-center py-12 text-gray-600">Loading...</div>
+                <div className="py-12"><Loader size="lg" variant="spinner" text="Loading restaurants..." /></div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -494,29 +494,29 @@ export const AdminDashboard: React.FC = () => {
                               </td>
                               <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                 <div className="flex flex-col sm:flex-row gap-2">
-                                <Button
-                                  size="sm"
-                                  className="hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto"
-                                  variant="outline"
-                                  onClick={() =>
-                                    handleToggleRestaurantStatus(
-                                      restaurant.id,
-                                      restaurant.isVerified
-                                    )
-                                  }
-                                >
-                                  {restaurant.isVerified ? 'Unverify' : 'Verify'}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto"
-                                  onClick={() =>
-                                    handleDeleteRestaurant(restaurant.id, restaurant.restaurantName)
-                                  }
-                                >
-                                  <Trash2 size={16} />
-                                </Button>
+                                  <Button
+                                    size="sm"
+                                    className="hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto"
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleToggleRestaurantStatus(
+                                        restaurant.id,
+                                        restaurant.isVerified
+                                      )
+                                    }
+                                  >
+                                    {restaurant.isVerified ? 'Unverify' : 'Verify'}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto"
+                                    onClick={() =>
+                                      handleDeleteRestaurant(restaurant.id, restaurant.restaurantName)
+                                    }
+                                  >
+                                    <Trash2 size={16} />
+                                  </Button>
                                 </div>
                               </td>
                             </tr>

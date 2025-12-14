@@ -416,7 +416,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
         <div className="flex overflow-x-auto space-x-2 mb-6 bg-white p-2 rounded-2xl shadow-md scrollbar-hide">
           <button
             onClick={() => setActiveTab('stats')}
-            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'stats'
+            className={`shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'stats'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -426,7 +426,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
           </button>
           <button
             onClick={() => setActiveTab('listings')}
-            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'listings'
+            className={`shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'listings'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -436,7 +436,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
           </button>
           <button
             onClick={() => setActiveTab('requests')}
-            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'requests'
+            className={`shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'requests'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -447,7 +447,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'history'
+            className={`shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'history'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -577,7 +577,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
                 <button
                   onClick={() => setSelectedCategory('ALL')}
-                  className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${selectedCategory === 'ALL'
+                  className={`shrink-0 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${selectedCategory === 'ALL'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
@@ -1340,7 +1340,12 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
                 onClick={handleSaveListing}
                 disabled={isLoading}
               >
-                {isLoading ? 'Saving...' : editingId ? 'Update Listing' : 'Create Listing'}
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    Saving...
+                  </span>
+                ) : editingId ? 'Update Listing' : 'Create Listing'}
               </Button>
             </div>
           </div>
