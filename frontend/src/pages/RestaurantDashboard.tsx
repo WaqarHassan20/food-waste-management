@@ -413,45 +413,46 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
         )}
 
         {/* Tabs */}
-        <div className="flex space-x-2 mb-6 bg-white p-2 rounded-2xl shadow-md flex-wrap">
+        <div className="flex overflow-x-auto space-x-2 mb-6 bg-white p-2 rounded-2xl shadow-md scrollbar-hide">
           <button
             onClick={() => setActiveTab('stats')}
-            className={`flex-1 min-w-max py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'stats'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'stats'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
           >
-            <BarChart3 size={20} />
+            <BarChart3 size={18} className="sm:w-5 sm:h-5" />
             <span>Overview</span>
           </button>
           <button
             onClick={() => setActiveTab('listings')}
-            className={`flex-1 min-w-max py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'listings'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'listings'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
           >
-            <Package size={20} />
+            <Package size={18} className="sm:w-5 sm:h-5" />
             <span>My Listings</span>
           </button>
           <button
             onClick={() => setActiveTab('requests')}
-            className={`flex-1 min-w-max py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'requests'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'requests'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
           >
-            <Clock size={20} />
-            <span>Requests ({pendingRequests.length})</span>
+            <Clock size={18} className="sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Requests ({pendingRequests.length})</span>
+            <span className="sm:hidden">Requests</span>
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex-1 min-w-max py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'history'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'history'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
           >
-            <CheckCircle size={20} />
+            <CheckCircle size={18} className="sm:w-5 sm:h-5" />
             <span>History</span>
           </button>
         </div>
@@ -570,11 +571,13 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
           <>
             {/* Category Filter */}
             <div className="mb-6 bg-white p-4 rounded-2xl shadow-md">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-gray-700 mr-2">Filter by Category:</span>
+              <div className="mb-3">
+                <span className="font-semibold text-gray-700 text-sm sm:text-base">Filter by Category:</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
                 <button
                   onClick={() => setSelectedCategory('ALL')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'ALL'
+                  className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${selectedCategory === 'ALL'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}

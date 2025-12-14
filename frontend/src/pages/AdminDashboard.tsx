@@ -160,41 +160,41 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 py-8">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 py-6 sm:py-8">
       <div className="container mx-auto px-4">
-        <div className="mb-8 bg-white rounded-3xl p-8 shadow-lg border border-gray-200">
+        <div className="mb-6 sm:mb-8 bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Admin Dashboard</h1>
-              <p className="text-lg text-gray-600">Monitor and manage the FoodShare platform</p>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">Admin Dashboard</h1>
+              <p className="text-sm sm:text-base md:text-lg text-gray-600">Monitor and manage the FoodShare platform</p>
             </div>
           </div>
         </div>
 
-        <div className="flex space-x-2 mb-6 bg-white p-2 rounded-2xl shadow-md">
+        <div className="flex overflow-x-auto space-x-2 mb-6 bg-white p-2 rounded-2xl shadow-md scrollbar-hide">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex-1 py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'overview'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'overview'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
           >
-            <BarChart3 size={20} />
+            <BarChart3 size={18} className="sm:w-5 sm:h-5" />
             <span>Overview</span>
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex-1 py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'users'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'users'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
           >
-            <Users size={20} />
+            <Users size={18} className="sm:w-5 sm:h-5" />
             <span>Users</span>
           </button>
           <button
             onClick={() => setActiveTab('restaurants')}
-            className={`flex-1 py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'restaurants'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'restaurants'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -227,12 +227,12 @@ export const AdminDashboard: React.FC = () => {
           <Card>
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">User Management</h3>
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">User Management</h3>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center flex-wrap gap-2 bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setUserRoleFilter('all')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${userRoleFilter === 'all'
+                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${userRoleFilter === 'all'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -241,7 +241,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setUserRoleFilter('ADMIN')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${userRoleFilter === 'ADMIN'
+                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${userRoleFilter === 'ADMIN'
                         ? 'bg-purple-600 text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -250,7 +250,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setUserRoleFilter('USER')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${userRoleFilter === 'USER'
+                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${userRoleFilter === 'USER'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -258,7 +258,7 @@ export const AdminDashboard: React.FC = () => {
                       Regular Users
                     </button>
                   </div>
-                  <Button variant="outline" onClick={loadUsers}>
+                  <Button variant="outline" onClick={loadUsers} size="sm" className="w-full sm:w-auto">
                     Refresh
                   </Button>
                 </div>
@@ -270,25 +270,25 @@ export const AdminDashboard: React.FC = () => {
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Name
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Email
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Phone
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Role
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Joined
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
@@ -311,18 +311,18 @@ export const AdminDashboard: React.FC = () => {
                               className={`hover:bg-gray-50 ${user.role === 'ADMIN' ? 'bg-purple-50' : 'bg-blue-50'
                                 }`}
                             >
-                              <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                              <td className="px-3 sm:px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                                 {user.name}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                              <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-gray-600">
                                 {user.email}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                              <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-gray-600">
                                 {user.phone || 'N/A'}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
+                              <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                 <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'ADMIN'
+                                  className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'ADMIN'
                                     ? 'bg-purple-600 text-white'
                                     : 'bg-blue-600 text-white'
                                     }`}
@@ -330,19 +330,20 @@ export const AdminDashboard: React.FC = () => {
                                   {user.role || user.type}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                              <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-gray-600">
                                 {new Date(user.createdAt).toLocaleDateString()}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
+                              <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                 <Badge variant={user.isActive ? 'success' : 'error'}>
                                   {user.isActive ? 'Active' : 'Suspended'}
                                 </Badge>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap space-x-2">
+                              <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                                <div className="flex flex-col sm:flex-row gap-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
+                                  className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors w-full sm:w-auto"
                                   onClick={() => handleToggleUserStatus(user.id, user.isActive)}
                                 >
                                   {user.isActive ? 'Suspend' : 'Activate'}
@@ -350,11 +351,12 @@ export const AdminDashboard: React.FC = () => {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="hover:bg-red-50 hover:text-red-600 transition-colors"
+                                  className="hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto"
                                   onClick={() => handleDeleteUser(user.id, user.name)}
                                 >
                                   <Trash2 size={16} />
                                 </Button>
+                                </div>
                               </td>
                             </tr>
                           ))
@@ -370,13 +372,13 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'restaurants' && (
           <Card>
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Restaurant Management</h3>
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Restaurant Management</h3>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+                  <div className="flex items-center flex-wrap gap-2 bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setRestaurantVerificationFilter('all')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${restaurantVerificationFilter === 'all'
+                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${restaurantVerificationFilter === 'all'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -385,7 +387,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setRestaurantVerificationFilter('verified')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${restaurantVerificationFilter === 'verified'
+                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${restaurantVerificationFilter === 'verified'
                         ? 'bg-green-600 text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -394,7 +396,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setRestaurantVerificationFilter('unverified')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${restaurantVerificationFilter === 'unverified'
+                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${restaurantVerificationFilter === 'unverified'
                         ? 'bg-orange-600 text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -402,7 +404,7 @@ export const AdminDashboard: React.FC = () => {
                       Unverified
                     </button>
                   </div>
-                  <Button variant="outline" onClick={loadRestaurants}>
+                  <Button variant="outline" onClick={loadRestaurants} size="sm" className="w-full sm:w-auto">
                     Refresh
                   </Button>
                 </div>
@@ -414,25 +416,25 @@ export const AdminDashboard: React.FC = () => {
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Name
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Address
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Phone
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Rating
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Joined
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
@@ -467,22 +469,22 @@ export const AdminDashboard: React.FC = () => {
                               className={`hover:bg-gray-50 ${restaurant.isVerified ? 'bg-green-50' : 'bg-orange-50'
                                 }`}
                             >
-                              <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                              <td className="px-3 sm:px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                                 {restaurant.restaurantName}
                               </td>
-                              <td className="px-6 py-4 text-gray-600">{restaurant.address}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                              <td className="hidden lg:table-cell px-6 py-4 text-gray-600">{restaurant.address}</td>
+                              <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-gray-600">
                                 {restaurant.phone}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                              <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-gray-900">
                                 {restaurant.rating?.toFixed(1) || 'N/A'} ⭐
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                              <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-gray-600">
                                 {new Date(restaurant.createdAt).toLocaleDateString()}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
+                              <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                 <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${restaurant.isVerified
+                                  className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${restaurant.isVerified
                                     ? 'bg-green-600 text-white'
                                     : 'bg-orange-600 text-white'
                                     }`}
@@ -490,10 +492,11 @@ export const AdminDashboard: React.FC = () => {
                                   {restaurant.isVerified ? 'Verified' : 'Pending'}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap space-x-2">
+                              <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                                <div className="flex flex-col sm:flex-row gap-2">
                                 <Button
                                   size="sm"
-                                  className="hover:bg-red-50 hover:text-red-600 transition-colors"
+                                  className="hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto"
                                   variant="outline"
                                   onClick={() =>
                                     handleToggleRestaurantStatus(
@@ -507,13 +510,14 @@ export const AdminDashboard: React.FC = () => {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="hover:bg-red-50 hover:text-red-600 transition-colors"
+                                  className="hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto"
                                   onClick={() =>
                                     handleDeleteRestaurant(restaurant.id, restaurant.restaurantName)
                                   }
                                 >
                                   <Trash2 size={16} />
                                 </Button>
+                                </div>
                               </td>
                             </tr>
                           ))
