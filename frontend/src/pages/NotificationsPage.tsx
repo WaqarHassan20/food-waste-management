@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Loader } from '../components/ui';
 import {
   Bell,
   Check,
@@ -267,8 +268,8 @@ const NotificationsPage: React.FC = () => {
         {/* Notifications List */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="py-16">
+              <Loader size="lg" variant="dots" text="Loading notifications..." />
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-4">

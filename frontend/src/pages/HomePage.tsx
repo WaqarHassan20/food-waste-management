@@ -9,95 +9,95 @@ export const HomePage: React.FC = () => {
   return (
     <div className="bg-linear-to-br from-emerald-100 via-teal-100 to-cyan-100">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 md:py-32">
+      <section className="container mx-auto px-4 py-12 sm:py-16 md:py-24 lg:py-32">
         <div className="text-center max-w-5xl mx-auto">
-          <div className="inline-block mb-6 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold animate-pulse">
+          <div className="inline-block mb-4 sm:mb-6 px-3 sm:px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-xs sm:text-sm font-semibold animate-pulse">
             🌍 Join 10,000+ People Making a Difference
           </div>
-          <h1 className="text-6xl md:text-7xl font-extrabold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-gray-900 mb-4 sm:mb-6 leading-tight px-2">
             Reduce Food Waste,
             <span className="bg-linear-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent"> Feed Communities</span>
           </h1>
-          <p className="text-2xl text-gray-700 mb-10 leading-relaxed max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-700 mb-6 sm:mb-8 md:mb-10 leading-relaxed max-w-3xl mx-auto px-4">
             Connect restaurants with surplus food to people who need it most. Together, we're building a sustainable future while fighting hunger in our communities.
           </p>
-          <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-            <Button size="lg" onClick={() => navigate('/auth/signup/user')} className="shadow-xl">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-5 justify-center items-center px-4">
+            <Button size="lg" onClick={() => navigate('/auth/signup/user')} className="w-full sm:w-auto shadow-xl">
               <Sparkles size={20} className="mr-2" />
               Get Started Free
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate('/auth/signin/user')}>
+            <Button size="lg" variant="outline" onClick={() => navigate('/auth/signin/user')} className="w-full sm:w-auto">
               <Search size={20} className="mr-2" />
               Sign In to Browse Food
             </Button>
           </div>
-          <p className="mt-6 text-sm text-gray-500">No credit card required  •  Free forever  •  Make an impact today</p>
+          <p className="mt-4 sm:mt-6 text-xs sm:text-sm text-gray-500 px-4">No credit card required  •  Free forever  •  Make an impact today</p>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="bg-white py-16">
+      <section className="bg-white py-12 sm:py-16">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="text-center p-8 rounded-2xl bg-linear-to-br from-emerald-50 to-teal-50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-              <div className="text-5xl font-extrabold bg-linear-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-3">10,847</div>
-              <div className="text-gray-700 font-semibold">Meals Saved</div>
-              <div className="text-xs text-gray-500 mt-2">This Month</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+            <div className="text-center p-6 sm:p-8 rounded-2xl bg-linear-to-br from-emerald-50 to-teal-50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+              <div className="text-4xl sm:text-5xl font-extrabold bg-linear-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2 sm:mb-3">10,847</div>
+              <div className="text-sm sm:text-base text-gray-700 font-semibold">Meals Saved</div>
+              <div className="text-xs text-gray-500 mt-1 sm:mt-2">This Month</div>
             </div>
-            <div className="text-center p-8 rounded-2xl bg-linear-to-br from-blue-50 to-indigo-50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-              <div className="text-5xl font-extrabold bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">523</div>
-              <div className="text-gray-700 font-semibold">Partner Restaurants</div>
-              <div className="text-xs text-gray-500 mt-2">And Growing</div>
+            <div className="text-center p-6 sm:p-8 rounded-2xl bg-linear-to-br from-blue-50 to-indigo-50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+              <div className="text-4xl sm:text-5xl font-extrabold bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2 sm:mb-3">523</div>
+              <div className="text-sm sm:text-base text-gray-700 font-semibold">Partner Restaurants</div>
+              <div className="text-xs text-gray-500 mt-1 sm:mt-2">And Growing</div>
             </div>
-            <div className="text-center p-8 rounded-2xl bg-linear-to-br from-purple-50 to-pink-50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-              <div className="text-5xl font-extrabold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">5,234</div>
-              <div className="text-gray-700 font-semibold">Active Users</div>
-              <div className="text-xs text-gray-500 mt-2">Helping Daily</div>
+            <div className="text-center p-6 sm:p-8 rounded-2xl bg-linear-to-br from-purple-50 to-pink-50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+              <div className="text-4xl sm:text-5xl font-extrabold bg-linear-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2 sm:mb-3">5,234</div>
+              <div className="text-sm sm:text-base text-gray-700 font-semibold">Active Users</div>
+              <div className="text-xs text-gray-500 mt-1 sm:mt-2">Helping Daily</div>
             </div>
-            <div className="text-center p-8 rounded-2xl bg-linear-to-br from-orange-50 to-red-50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-              <div className="text-5xl font-extrabold bg-linear-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-3">12.4K</div>
-              <div className="text-gray-700 font-semibold">KG CO₂ Saved</div>
-              <div className="text-xs text-gray-500 mt-2">Environmental Impact</div>
+            <div className="text-center p-6 sm:p-8 rounded-2xl bg-linear-to-br from-orange-50 to-red-50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+              <div className="text-4xl sm:text-5xl font-extrabold bg-linear-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2 sm:mb-3">12.4K</div>
+              <div className="text-sm sm:text-base text-gray-700 font-semibold">KG CO₂ Saved</div>
+              <div className="text-xs text-gray-500 mt-1 sm:mt-2">Environmental Impact</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold text-gray-900 mb-4">How It Works</h2>
-          <p className="text-xl text-gray-600">Simple steps to make a huge impact</p>
+      <section className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
+        <div className="text-center mb-12 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 px-4">How It Works</h2>
+          <p className="text-lg sm:text-xl text-gray-600 px-4">Simple steps to make a huge impact</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 md:gap-10">
           <div className="relative">
-            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-3 border-2 border-emerald-100">
-              <div className="absolute -top-6 left-8 w-12 h-12 bg-linear-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">1</div>
-              <UtensilsCrossed size={48} className="text-emerald-600 mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-4 mt-2">Restaurants List Food</h3>
-              <p className="text-gray-600 leading-relaxed">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-3 border-2 border-emerald-100">
+              <div className="absolute -top-6 left-6 sm:left-8 w-12 h-12 bg-linear-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">1</div>
+              <UtensilsCrossed size={40} className="sm:w-12 sm:h-12 text-emerald-600 mb-4" />
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 mt-2">Restaurants List Food</h3>
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                 Restaurants easily post surplus food with details about quantity, quality, pickup times, and exact location through our intuitive dashboard.
               </p>
-              <ul className="mt-4 space-y-2 text-sm text-gray-500">
-                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-emerald-500" />Quick listing process</li>
-                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-emerald-500" />Set pickup windows</li>
-                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-emerald-500" />Manage inventory</li>
+              <ul className="mt-4 space-y-2 text-xs sm:text-sm text-gray-500">
+                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-emerald-500 flex-shrink-0" />Quick listing process</li>
+                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-emerald-500 flex-shrink-0" />Set pickup windows</li>
+                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-emerald-500 flex-shrink-0" />Manage inventory</li>
               </ul>
             </div>
           </div>
 
           <div className="relative">
-            <div className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-3 border-2 border-blue-100">
-              <div className="absolute -top-6 left-8 w-12 h-12 bg-linear-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">2</div>
-              <Users size={48} className="text-blue-600 mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-4 mt-2">Users Browse & Request</h3>
-              <p className="text-gray-600 leading-relaxed">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-3 border-2 border-blue-100">
+              <div className="absolute -top-6 left-6 sm:left-8 w-12 h-12 bg-linear-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">2</div>
+              <Users size={40} className="sm:w-12 sm:h-12 text-blue-600 mb-4" />
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 mt-2">Users Browse & Request</h3>
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                 Users discover available food nearby, filter by preferences, and submit instant requests for items they need with just a few clicks.
               </p>
-              <ul className="mt-4 space-y-2 text-sm text-gray-500">
-                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-blue-500" />Location-based search</li>
-                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-blue-500" />Real-time availability</li>
-                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-blue-500" />Instant notifications</li>
+              <ul className="mt-4 space-y-2 text-xs sm:text-sm text-gray-500">
+                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-blue-500 flex-shrink-0" />Location-based search</li>
+                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-blue-500 flex-shrink-0" />Real-time availability</li>
+                <li className="flex items-center"><CheckCircle size={16} className="mr-2 text-blue-500 flex-shrink-0" />Instant notifications</li>
               </ul>
             </div>
           </div>

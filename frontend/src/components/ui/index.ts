@@ -8,3 +8,4 @@ export { Toast, ToastContainer, type ToastType } from './Toast';
 export { ConfirmDialog } from './ConfirmDialog';
 export { NotificationDropdown } from './NotificationDropdown';
 export { NotificationPanel } from './NotificationPanel';
+export { Loader, Skeleton, CardSkeleton } from './Loader';

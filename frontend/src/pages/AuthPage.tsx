@@ -346,7 +346,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, initialMode = 'sign
               )}
 
               <Button type="submit" className="w-full mt-4" size="lg" disabled={isLoading}>
-                {isLoading ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    Please wait...
+                  </span>
+                ) : (isSignUp ? 'Create Account' : 'Sign In')}
               </Button>
             </form>
 

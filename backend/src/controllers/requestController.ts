@@ -209,7 +209,19 @@ export const getRestaurantFoodRequests = async (
     const foodRequests = await prisma.foodRequest.findMany({
       where,
       include: {
-        foodListing: true,
+        foodListing: {
+          include: {
+            restaurant: {
+              select: {
+                id: true,
+                restaurantName: true,
+                address: true,
+                phone: true,
+                isVerified: true,
+              },
+            },
+          },
+        },
         user: {
           select: {
             id: true,

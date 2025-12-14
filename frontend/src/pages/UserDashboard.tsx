@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Badge, ToastContainer, ConfirmDialog } from '../components/ui';
+import { Card, Button, Badge, ToastContainer, ConfirmDialog, Loader } from '../components/ui';
 import { Search, Users, Clock, MapPin, Package, CheckCircle, ShoppingBag } from 'lucide-react';
 import { foodAPI, requestAPI } from '../services/api';
 import type { FoodListing, FoodRequest } from '../types';
@@ -176,42 +176,42 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-2 mb-6 bg-white p-2 rounded-2xl shadow-md">
+        <div className="flex overflow-x-auto space-x-2 mb-6 bg-white p-2 rounded-2xl shadow-md scrollbar-hide">
           <button
             onClick={() => setActiveTab('browse')}
-            className={`flex-1 py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'browse'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'browse'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
           >
-            <Search size={20} />
+            <Search size={18} className="sm:w-5 sm:h-5" />
             <span>Browse Food</span>
           </button>
           <button
             onClick={() => setActiveTab('requests')}
-            className={`flex-1 py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'requests'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'requests'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
           >
-            <Clock size={20} />
+            <Clock size={18} className="sm:w-5 sm:h-5" />
             <span>My Requests</span>
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex-1 py-3 px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 ${activeTab === 'history'
+            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'history'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
           >
-            <CheckCircle size={20} />
+            <CheckCircle size={18} className="sm:w-5 sm:h-5" />
             <span>History</span>
           </button>
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="text-gray-600">Loading...</div>
+          <div className="py-12">
+            <Loader size="lg" variant="spinner" text="Loading your dashboard..." />
           </div>
         ) : (
           <>
@@ -220,11 +220,13 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
               <>
                 {/* Category Filter */}
                 <div className="mb-6 bg-white p-4 rounded-2xl shadow-md">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-gray-700 mr-2">Filter by Category:</span>
+                  <div className="mb-3">
+                    <span className="font-semibold text-gray-700 text-sm sm:text-base">Filter by Category:</span>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
                     <button
                       onClick={() => setSelectedCategory('ALL')}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'ALL'
+                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${selectedCategory === 'ALL'
                         ? 'bg-emerald-600 text-white shadow-md'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
@@ -233,7 +235,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     </button>
                     <button
                       onClick={() => setSelectedCategory('PREPARED_FOOD')}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'PREPARED_FOOD'
+                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${selectedCategory === 'PREPARED_FOOD'
                         ? 'bg-emerald-600 text-white shadow-md'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
@@ -242,7 +244,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ userName }) => {
                     </button>
                     <button
                       onClick={() => setSelectedCategory('RAW_INGREDIENTS')}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === 'RAW_INGREDIENTS'
+                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${selectedCategory === 'RAW_INGREDIENTS'
                         ? 'bg-emerald-600 text-white shadow-md'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}

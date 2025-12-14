@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from '../utils/response';
 import type { AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { NotificationService } from '../services/notificationService';
+import { FoodStatus } from '../db/generated/prisma';
 
 export const getAllUsers = async (
   req: AuthRequest,
@@ -466,5 +467,186 @@ export const deleteRestaurant = async (
   } catch (error) {
     console.error('Delete restaurant error:', error);
     return errorResponse(res, 'Failed to delete restaurant', 500, error);
+  }
+};
+
+export const getAllFoodListings = async (
+  req: AuthRequest,
+  res: Response
+): Promise<Response> => {
+  try {
+    const { page = 1, limit = 50, status, restaurantId, search } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const where: any = {};
+
+    if (status && typeof status === 'string') {
+      // Validate status is a valid FoodStatus enum value
+      const validStatuses: string[] = Object.values(FoodStatus);
+      if (validStatuses.includes(status)) {
+        where.status = status as typeof FoodStatus[keyof typeof FoodStatus];
+      }
+    }
+
+    if (restaurantId) {
+      where.restaurantId = restaurantId as string;
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search as string, mode: 'insensitive' } },
+        { description: { contains: search as string, mode: 'insensitive' } },
+      ];
+    }
+
+    const [listings, total] = await Promise.all([
+      prisma.foodListing.findMany({
+        where,
+        skip,
+        take: Number(limit),
+        include: {
+          restaurant: {
+            select: {
+              id: true,
+              restaurantName: true,
+              address: true,
+              phone: true,
+              isVerified: true,
+            },
+          },
+          _count: {
+            select: {
+              foodRequests: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.foodListing.count({ where }),
+    ]);
+
+    return successResponse(
+      res,
+      {
+        listings,
+        pagination: {
+          total,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: Math.ceil(total / Number(limit)),
+        },
+      },
+      'Food listings fetched successfully'
+    );
+  } catch (error) {
+    console.error('Get all food listings error:', error);
+    return errorResponse(res, 'Failed to fetch food listings', 500, error);
+  }
+};
+
+export const deleteFoodListing = async (
+  req: AuthRequest,
+  res: Response
+): Promise<Response> => {
+  try {
+    const { id } = req.params;
+
+    // Check if food listing exists
+    const listing = await prisma.foodListing.findUnique({
+      where: { id },
+      include: {
+        restaurant: true,
+      },
+    });
+
+    if (!listing) {
+      return errorResponse(res, 'Food listing not found', 404);
+    }
+
+    // Delete the listing and all related requests
+    await prisma.foodListing.delete({
+      where: { id },
+    });
+
+    // Send notification to restaurant
+    await NotificationService.createRestaurantNotification({
+      restaurantId: listing.restaurantId,
+      title: 'Listing Removed by Admin',
+      message: `Your listing "${listing.title}" has been removed by an administrator.`,
+      type: 'SYSTEM_ALERT',
+    });
+
+    return successResponse(
+      res,
+      null,
+      'Food listing deleted successfully'
+    );
+  } catch (error) {
+    console.error('Delete food listing error:', error);
+    return errorResponse(res, 'Failed to delete food listing', 500, error);
+  }
+};
+
+export const updateFoodListingStatus = async (
+  req: AuthRequest,
+  res: Response
+): Promise<Response> => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate status is a valid FoodStatus enum value
+    const validStatuses: string[] = Object.values(FoodStatus);
+    if (!status || !validStatuses.includes(status)) {
+      return errorResponse(res, `Invalid status. Must be one of: ${validStatuses.join(', ')}`, 400);
+    }
+
+    // Check if food listing exists
+    const listing = await prisma.foodListing.findUnique({
+      where: { id },
+      include: {
+        restaurant: true,
+      },
+    });
+
+    if (!listing) {
+      return errorResponse(res, 'Food listing not found', 404);
+    }
+
+    // Update the listing status
+    const updatedListing = await prisma.foodListing.update({
+      where: { id },
+      data: { status },
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            restaurantName: true,
+            address: true,
+            phone: true,
+            isVerified: true,
+          },
+        },
+      },
+    });
+
+    // Send notification to restaurant
+    await NotificationService.createRestaurantNotification({
+      restaurantId: listing.restaurantId,
+      title: 'Listing Status Updated by Admin',
+      message: `The status of your listing "${listing.title}" has been updated to ${status} by an administrator.`,
+      type: 'SYSTEM_ALERT',
+    });
+
+    return successResponse(
+      res,
+      updatedListing,
+      'Food listing status updated successfully'
+    );
+  } catch (error) {
+    console.error('Update food listing status error:', error);
+    return errorResponse(res, 'Failed to update food listing status', 500, error);
   }
 };

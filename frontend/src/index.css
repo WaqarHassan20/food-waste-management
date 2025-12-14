@@ -42,3 +42,32 @@ a,
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ensure body is always at least full viewport height */
+html,
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Touch-friendly tap targets (minimum 44x44px for mobile) */
+@media (max-width: 768px) {
+
+  button,
+  a[role="button"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

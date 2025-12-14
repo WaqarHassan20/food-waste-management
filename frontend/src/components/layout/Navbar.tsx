@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Logo, NotificationDropdown } from '../ui';
-import { LogOut, LogIn, UserPlus, UserCircle, ShieldCheck, Store } from 'lucide-react';
+import { LogOut, LogIn, UserPlus, UserCircle, ShieldCheck, Store, Menu, X } from 'lucide-react';
 import type { UserRole } from '../../types';
 
 interface NavbarProps {
@@ -19,6 +19,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleAuthClick = (mode: 'signin' | 'signup') => {
@@ -45,7 +46,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Logo size="md" variant="light" showText={true} />
           </Link>
 
-          <div className="flex items-center gap-4">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-4">
             {isAuthenticated ? (
               <>
                 <div className="hidden md:flex items-center px-3 py-1.5 bg-gray-100 rounded-full border border-gray-200">
@@ -129,6 +139,54 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden py-4 border-t border-emerald-100 animate-slideDown">
+            {isAuthenticated ? (
+              <div className="space-y-3">
+                <div className="px-4 py-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900">{userName}</p>
+                  <p className="text-xs text-emerald-600 uppercase tracking-wider mt-1">{userRole}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    onLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-700 bg-white hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200 border border-gray-200 hover:border-red-300"
+                >
+                  <LogOut size={16} />
+                  <span className="font-medium">Logout</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    handleAuthClick('signin');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full justify-center text-gray-600 hover:text-emerald-600 hover:bg-emerald-50"
+                >
+                  <LogIn size={18} className="mr-2" />
+                  Sign In
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleAuthClick('signup');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full justify-center bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-lg"
+                >
+                  <UserPlus size={18} className="mr-2" />
+                  Sign Up
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Add keyframe animation */}
