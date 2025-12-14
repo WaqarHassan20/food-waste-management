@@ -672,12 +672,26 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
               {filteredListings.map((listing) => (
                 <Card key={listing.id} className="overflow-hidden hover:shadow-xl transition-shadow">
                   {/* Image Section */}
-                  <div className="relative h-48 bg-linear-to-br from-emerald-100 to-teal-100">
-                    {listing.imageUrl || listing.imageData ? (
+                  <div className="relative h-48 bg-gradient-to-br from-emerald-100 to-teal-100">
+                    {listing.imageUrl ? (
                       <img
-                        src={listing.imageUrl || `data:${listing.imageMimeType || 'image/jpeg'};base64,${listing.imageData}`}
+                        src={listing.imageUrl}
                         alt={listing.title}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-300"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
+                        }}
+                      />
+                    ) : listing.imageData ? (
+                      <img
+                        src={`data:${listing.imageMimeType || 'image/jpeg'};base64,${listing.imageData}`}
+                        alt={listing.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-300"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -801,15 +815,26 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
             {pendingRequests.map((request) => (
               <Card key={request.id} className="overflow-hidden hover:shadow-xl transition-shadow">
                 {/* Image Section */}
-                <div className="relative h-48 bg-linear-to-br from-emerald-100 to-teal-100">
-                  {request.foodListing?.imageUrl || request.foodListing?.imageData ? (
+                <div className="relative h-48 bg-gradient-to-br from-emerald-100 to-teal-100">
+                  {request.foodListing?.imageUrl ? (
                     <img
-                      src={
-                        request.foodListing.imageUrl ||
-                        `data:${request.foodListing.imageMimeType || 'image/jpeg'};base64,${request.foodListing.imageData}`
-                      }
+                      src={request.foodListing.imageUrl}
                       alt={request.foodListing?.title || 'Food Item'}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-300"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
+                      }}
+                    />
+                  ) : request.foodListing?.imageData ? (
+                    <img
+                      src={`data:${request.foodListing.imageMimeType || 'image/jpeg'};base64,${request.foodListing.imageData}`}
+                      alt={request.foodListing?.title || 'Food Item'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-300"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -837,7 +862,7 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
 
                 {/* Content Section */}
                 <div className="p-5">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
                     {request.foodListing?.title || 'Food Item'}
                   </h3>
 
@@ -848,6 +873,9 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
                     </p>
                     {request.user?.phone && (
                       <p className="text-xs text-blue-700">📞 {request.user.phone}</p>
+                    )}
+                    {request.user?.email && (
+                      <p className="text-xs text-blue-700">✉️ {request.user.email}</p>
                     )}
                   </div>
 
@@ -1021,12 +1049,26 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({ restau
               {filteredCompletedListings.map((listing) => (
                 <Card key={listing.id} className="overflow-hidden hover:shadow-xl transition-shadow">
                   {/* Image Section */}
-                  <div className="relative h-48 bg-linear-to-br from-gray-100 to-gray-200">
-                    {listing.imageUrl || listing.imageData ? (
+                  <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200">
+                    {listing.imageUrl ? (
                       <img
-                        src={listing.imageUrl || `data:${listing.imageMimeType || 'image/jpeg'};base64,${listing.imageData}`}
+                        src={listing.imageUrl}
                         alt={listing.title}
                         className="w-full h-full object-cover opacity-75"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
+                        }}
+                      />
+                    ) : listing.imageData ? (
+                      <img
+                        src={`data:${listing.imageMimeType || 'image/jpeg'};base64,${listing.imageData}`}
+                        alt={listing.title}
+                        className="w-full h-full object-cover opacity-75"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-300"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>`;
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">

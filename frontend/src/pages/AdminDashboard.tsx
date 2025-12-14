@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Badge, ToastContainer, ConfirmDialog, Loader } from '../components/ui';
-import { BarChart3, Users, UtensilsCrossed, Trash2 } from 'lucide-react';
-import { adminAPI, foodAPI } from '../services/api';
+import { Card, Button, Badge, ToastContainer, ConfirmDialog, Loader, Modal } from '../components/ui';
+import { BarChart3, Users, UtensilsCrossed, Trash2, Eye, Clock } from 'lucide-react';
+import { adminAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
 export const AdminDashboard: React.FC = () => {
@@ -15,9 +15,10 @@ export const AdminDashboard: React.FC = () => {
   });
   const [users, setUsers] = useState<any[]>([]);
   const [restaurants, setRestaurants] = useState<any[]>([]);
-  const [recentListings, setRecentListings] = useState<any[]>([]);
+  const [allListings, setAllListings] = useState<any[]>([]);
   const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'ADMIN' | 'USER'>('all');
   const [restaurantVerificationFilter, setRestaurantVerificationFilter] = useState<'all' | 'verified' | 'unverified'>('all');
+  const [listingStatusFilter, setListingStatusFilter] = useState<'all' | 'AVAILABLE' | 'RESERVED' | 'CLAIMED' | 'EXPIRED'>('all');
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     type: 'user' | 'restaurant' | null;
@@ -30,6 +31,21 @@ export const AdminDashboard: React.FC = () => {
     name: string;
     currentStatus: boolean;
   }>({ isOpen: false, id: '', name: '', currentStatus: false });
+  const [listingDetailsModal, setListingDetailsModal] = useState<{
+    isOpen: boolean;
+    listing: any;
+  }>({ isOpen: false, listing: null });
+  const [listingDeleteDialog, setListingDeleteDialog] = useState<{
+    isOpen: boolean;
+    id: string;
+    title: string;
+  }>({ isOpen: false, id: '', title: '' });
+  const [listingStatusDialog, setListingStatusDialog] = useState<{
+    isOpen: boolean;
+    id: string;
+    title: string;
+    newStatus: string;
+  }>({ isOpen: false, id: '', title: '', newStatus: '' });
 
   const toast = useToast();
 
@@ -37,11 +53,17 @@ export const AdminDashboard: React.FC = () => {
     loadData();
   }, [activeTab]);
 
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      loadAllListingsData();
+    }
+  }, [listingStatusFilter]);
+
   const loadData = async () => {
     setLoading(true);
     try {
       if (activeTab === 'overview') {
-        await Promise.all([loadDashboardStats(), loadRecentListingsData()]);
+        await Promise.all([loadDashboardStats(), loadAllListingsData()]);
       } else if (activeTab === 'users') {
         await loadUsers();
       } else if (activeTab === 'restaurants') {
@@ -70,14 +92,18 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const loadRecentListingsData = async () => {
+  const loadAllListingsData = async () => {
     try {
-      const response: any = await foodAPI.getAllFood({ limit: 5 });
-      console.log('Food Listings Response:', response);
+      const params: any = { limit: 100 };
+      if (listingStatusFilter !== 'all') {
+        params.status = listingStatusFilter;
+      }
+      const response: any = await adminAPI.getAllFoodListings(params);
+      console.log('All Food Listings Response:', response);
       const data = response.data || response;
-      setRecentListings(data.foodListings || data.listings || data || []);
+      setAllListings(data.listings || []);
     } catch (error: any) {
-      console.error('Failed to load listings:', error);
+      console.error('Failed to load all listings:', error);
     }
   };
 
@@ -159,6 +185,42 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleViewListingDetails = (listing: any) => {
+    setListingDetailsModal({ isOpen: true, listing });
+  };
+
+  const handleDeleteListing = (listingId: string, listingTitle: string) => {
+    setListingDeleteDialog({ isOpen: true, id: listingId, title: listingTitle });
+  };
+
+  const confirmDeleteListing = async () => {
+    try {
+      await adminAPI.deleteFoodListing(listingDeleteDialog.id);
+      toast.success('Listing deleted successfully');
+      await loadAllListingsData();
+      await loadDashboardStats();
+      setListingDeleteDialog({ isOpen: false, id: '', title: '' });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete listing');
+    }
+  };
+
+  const handleForceExpireListing = (listingId: string, listingTitle: string) => {
+    setListingStatusDialog({ isOpen: true, id: listingId, title: listingTitle, newStatus: 'EXPIRED' });
+  };
+
+  const confirmUpdateListingStatus = async () => {
+    try {
+      await adminAPI.updateFoodListingStatus(listingStatusDialog.id, listingStatusDialog.newStatus);
+      toast.success(`Listing status updated to ${listingStatusDialog.newStatus}`);
+      await loadAllListingsData();
+      await loadDashboardStats();
+      setListingStatusDialog({ isOpen: false, id: '', title: '', newStatus: '' });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update listing status');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 py-6 sm:py-8">
       <div className="container mx-auto px-4">
@@ -174,7 +236,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex overflow-x-auto space-x-2 mb-6 bg-white p-2 rounded-2xl shadow-md scrollbar-hide">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'overview'
+            className={`shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'overview'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -184,7 +246,7 @@ export const AdminDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'users'
+            className={`shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'users'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -194,7 +256,7 @@ export const AdminDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('restaurants')}
-            className={`flex-shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'restaurants'
+            className={`shrink-0 py-2 sm:py-3 px-4 sm:px-6 font-semibold rounded-xl transition-all flex items-center justify-center space-x-2 text-sm sm:text-base ${activeTab === 'restaurants'
               ? 'bg-linear-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
               : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -214,9 +276,58 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <Card>
               <div className="p-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">📋 Recent Listings</h3>
-                {loading ? (<div className="py-8"><Loader size="md" variant="pulse" text="Loading listings..." /></div>) : recentListings.length === 0 ? (<div className="text-center py-8 text-gray-600">No recent listings</div>) : (
-                  <div className="space-y-4">{recentListings.map((listing: any) => (<div key={listing.id} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition"><div className="flex-1"><div className="flex justify-between items-start mb-2"><div><p className="text-gray-900 font-bold text-lg">{listing.title}</p><p className="text-sm text-gray-600">{listing.restaurant?.restaurantName}</p></div><Badge variant={listing.status === 'AVAILABLE' ? 'success' : 'warning'}>{listing.status}</Badge></div><p className="text-sm text-gray-700">{listing.description}</p><div className="flex items-center space-x-4 mt-2 text-sm text-gray-600"><span>📦 {listing.quantity} {listing.unit}</span><span>⏰ Expires: {new Date(listing.expiryDate).toLocaleDateString()}</span><span>📅 Listed: {new Date(listing.createdAt).toLocaleDateString()}</span></div></div></div>))}</div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900">📋 Food Listings Management</h3>
+                  <div className="flex items-center flex-wrap gap-2 bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setListingStatusFilter('all')}
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${listingStatusFilter === 'all'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setListingStatusFilter('AVAILABLE')}
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${listingStatusFilter === 'AVAILABLE'
+                        ? 'bg-green-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      Available
+                    </button>
+                    <button
+                      onClick={() => setListingStatusFilter('RESERVED')}
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${listingStatusFilter === 'RESERVED'
+                        ? 'bg-yellow-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      Reserved
+                    </button>
+                    <button
+                      onClick={() => setListingStatusFilter('CLAIMED')}
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${listingStatusFilter === 'CLAIMED'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      Claimed
+                    </button>
+                    <button
+                      onClick={() => setListingStatusFilter('EXPIRED')}
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${listingStatusFilter === 'EXPIRED'
+                        ? 'bg-red-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                    >
+                      Expired
+                    </button>
+                  </div>
+                </div>
+                {loading ? (<div className="py-8"><Loader size="md" variant="pulse" text="Loading listings..." /></div>) : allListings.length === 0 ? (<div className="text-center py-8 text-gray-600">No listings found</div>) : (
+                  <div className="space-y-4">{allListings.map((listing: any) => (<div key={listing.id} className="flex flex-col sm:flex-row items-start space-y-3 sm:space-y-0 sm:space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition"><div className="flex-1 w-full"><div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2"><div className="flex-1"><p className="text-gray-900 font-bold text-lg">{listing.title}</p><p className="text-sm text-gray-600">{listing.restaurant?.restaurantName}</p></div><div className="flex gap-2"><Badge variant={listing.status === 'AVAILABLE' ? 'success' : listing.status === 'RESERVED' ? 'warning' : listing.status === 'CLAIMED' ? 'default' : 'error'}>{listing.status}</Badge>{!listing.restaurant?.isVerified && <Badge variant="error">Unverified Restaurant</Badge>}</div></div><p className="text-sm text-gray-700 line-clamp-2">{listing.description}</p><div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-600"><span>📦 {listing.quantity} {listing.unit}</span><span>⏰ Expires: {new Date(listing.expiryDate).toLocaleDateString()}</span><span>📅 Listed: {new Date(listing.createdAt).toLocaleDateString()}</span>{listing._count?.foodRequests > 0 && <span className="text-blue-600 font-medium">👥 {listing._count.foodRequests} requests</span>}</div></div><div className="flex sm:flex-col gap-2 w-full sm:w-auto"><Button size="sm" variant="outline" className="hover:bg-blue-50 hover:text-blue-600 transition-colors flex-1 sm:flex-initial" onClick={() => handleViewListingDetails(listing)}><Eye size={16} className="mr-1" /> View</Button>{listing.status === 'AVAILABLE' && (<Button size="sm" variant="outline" className="hover:bg-orange-50 hover:text-orange-600 transition-colors flex-1 sm:flex-initial" onClick={() => handleForceExpireListing(listing.id, listing.title)}><Clock size={16} className="mr-1" /> Expire</Button>)}<Button size="sm" variant="ghost" className="hover:bg-red-50 hover:text-red-600 transition-colors flex-1 sm:flex-initial" onClick={() => handleDeleteListing(listing.id, listing.title)}><Trash2 size={16} /></Button></div></div>))}</div>
                 )}
               </div>
             </Card>
@@ -232,7 +343,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="flex items-center flex-wrap gap-2 bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setUserRoleFilter('all')}
-                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${userRoleFilter === 'all'
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${userRoleFilter === 'all'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -241,7 +352,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setUserRoleFilter('ADMIN')}
-                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${userRoleFilter === 'ADMIN'
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${userRoleFilter === 'ADMIN'
                         ? 'bg-purple-600 text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -250,7 +361,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setUserRoleFilter('USER')}
-                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${userRoleFilter === 'USER'
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${userRoleFilter === 'USER'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -378,7 +489,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="flex items-center flex-wrap gap-2 bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setRestaurantVerificationFilter('all')}
-                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${restaurantVerificationFilter === 'all'
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${restaurantVerificationFilter === 'all'
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -387,7 +498,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setRestaurantVerificationFilter('verified')}
-                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${restaurantVerificationFilter === 'verified'
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${restaurantVerificationFilter === 'verified'
                         ? 'bg-green-600 text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -396,7 +507,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setRestaurantVerificationFilter('unverified')}
-                      className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${restaurantVerificationFilter === 'unverified'
+                      className={`shrink-0 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${restaurantVerificationFilter === 'unverified'
                         ? 'bg-orange-600 text-white shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                         }`}
@@ -558,6 +669,143 @@ export const AdminDashboard: React.FC = () => {
         cancelText="Cancel"
         type={suspendDialog.currentStatus ? 'danger' : 'info'}
       />
+
+      <ConfirmDialog
+        isOpen={listingDeleteDialog.isOpen}
+        onClose={() => setListingDeleteDialog({ isOpen: false, id: '', title: '' })}
+        onConfirm={confirmDeleteListing}
+        title="Delete Food Listing"
+        message={`Are you sure you want to delete "${listingDeleteDialog.title}"? This will notify the restaurant and cannot be undone.`}
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={listingStatusDialog.isOpen}
+        onClose={() => setListingStatusDialog({ isOpen: false, id: '', title: '', newStatus: '' })}
+        onConfirm={confirmUpdateListingStatus}
+        title="Update Listing Status"
+        message={`Are you sure you want to mark "${listingStatusDialog.title}" as ${listingStatusDialog.newStatus}? The restaurant will be notified.`}
+        confirmText="Yes, Update"
+        cancelText="Cancel"
+        type="warning"
+      />
+
+      <Modal
+        isOpen={listingDetailsModal.isOpen}
+        onClose={() => setListingDetailsModal({ isOpen: false, listing: null })}
+        title="Listing Details"
+      >
+        {listingDetailsModal.listing && (
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-bold text-lg text-gray-900 mb-2">{listingDetailsModal.listing.title}</h4>
+              <Badge variant={listingDetailsModal.listing.status === 'AVAILABLE' ? 'success' : listingDetailsModal.listing.status === 'RESERVED' ? 'warning' : listingDetailsModal.listing.status === 'CLAIMED' ? 'default' : 'error'}>
+                {listingDetailsModal.listing.status}
+              </Badge>
+            </div>
+
+            <div>
+              <h5 className="font-semibold text-gray-700 mb-1">Description</h5>
+              <p className="text-gray-600">{listingDetailsModal.listing.description}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h5 className="font-semibold text-gray-700 mb-1">Quantity</h5>
+                <p className="text-gray-600">{listingDetailsModal.listing.quantity} {listingDetailsModal.listing.unit}</p>
+              </div>
+              <div>
+                <h5 className="font-semibold text-gray-700 mb-1">Category</h5>
+                <p className="text-gray-600">{listingDetailsModal.listing.category || 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h5 className="font-semibold text-gray-700 mb-1">Expiry Date</h5>
+                <p className="text-gray-600">{new Date(listingDetailsModal.listing.expiryDate).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <h5 className="font-semibold text-gray-700 mb-1">Pickup Time</h5>
+                <p className="text-gray-600">{listingDetailsModal.listing.pickupTime || 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h5 className="font-semibold text-gray-700 mb-2">Restaurant Information</h5>
+              <div className="space-y-1 text-sm">
+                <p><span className="font-medium">Name:</span> {listingDetailsModal.listing.restaurant?.restaurantName}</p>
+                <p><span className="font-medium">Address:</span> {listingDetailsModal.listing.restaurant?.address}</p>
+                <p><span className="font-medium">Phone:</span> {listingDetailsModal.listing.restaurant?.phone}</p>
+                <p><span className="font-medium">Verified:</span> {listingDetailsModal.listing.restaurant?.isVerified ? '✅ Yes' : '❌ No'}</p>
+              </div>
+            </div>
+
+            {listingDetailsModal.listing.allergens && listingDetailsModal.listing.allergens.length > 0 && (
+              <div>
+                <h5 className="font-semibold text-gray-700 mb-1">Allergens</h5>
+                <div className="flex flex-wrap gap-2">
+                  {listingDetailsModal.listing.allergens.map((allergen: string, idx: number) => (
+                    <Badge key={idx} variant="error">{allergen}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {listingDetailsModal.listing.dietaryInfo && listingDetailsModal.listing.dietaryInfo.length > 0 && (
+              <div>
+                <h5 className="font-semibold text-gray-700 mb-1">Dietary Info</h5>
+                <div className="flex flex-wrap gap-2">
+                  {listingDetailsModal.listing.dietaryInfo.map((info: string, idx: number) => (
+                    <Badge key={idx} variant="default">{info}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {listingDetailsModal.listing._count?.foodRequests > 0 && (
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <h5 className="font-semibold text-gray-700 mb-1">Active Requests</h5>
+                <p className="text-gray-600">{listingDetailsModal.listing._count.foodRequests} users have requested this item</p>
+              </div>
+            )}
+
+            <div className="text-xs text-gray-500 pt-4 border-t">
+              <p>Listed on: {new Date(listingDetailsModal.listing.createdAt).toLocaleString()}</p>
+              <p>Last updated: {new Date(listingDetailsModal.listing.updatedAt).toLocaleString()}</p>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              {listingDetailsModal.listing.status === 'AVAILABLE' && (
+                <Button
+                  variant="outline"
+                  className="flex-1 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                  onClick={() => {
+                    handleForceExpireListing(listingDetailsModal.listing.id, listingDetailsModal.listing.title);
+                    setListingDetailsModal({ isOpen: false, listing: null });
+                  }}
+                >
+                  <Clock size={16} className="mr-2" />
+                  Force Expire
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                className="flex-1 hover:bg-red-50 hover:text-red-600 transition-colors"
+                onClick={() => {
+                  handleDeleteListing(listingDetailsModal.listing.id, listingDetailsModal.listing.title);
+                  setListingDetailsModal({ isOpen: false, listing: null });
+                }}
+              >
+                <Trash2 size={16} className="mr-2" />
+                Delete Listing
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

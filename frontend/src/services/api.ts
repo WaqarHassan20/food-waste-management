@@ -234,6 +234,15 @@ export const adminAPI = {
 
   getAllRequests: (params?: { page?: number; limit?: number; status?: string }) =>
     axiosInstance.get('/admin/requests', { params }),
+
+  getAllFoodListings: (params?: { page?: number; limit?: number; status?: string; restaurantId?: string; search?: string }) =>
+    axiosInstance.get('/admin/food-listings', { params }),
+
+  deleteFoodListing: (id: string) =>
+    axiosInstance.delete(`/admin/food-listings/${id}`),
+
+  updateFoodListingStatus: (id: string, status: string) =>
+    axiosInstance.put(`/admin/food-listings/${id}/status`, { status }),
 };
 
 export default {

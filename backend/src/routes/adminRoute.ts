@@ -9,6 +9,9 @@ import {
   deleteRestaurant,
   getDashboardStats,
   getAllFoodRequests,
+  getAllFoodListings,
+  deleteFoodListing,
+  updateFoodListingStatus,
 } from '../controllers/adminController';
 import { authenticate, authorize } from '../middleware/auth';
 
@@ -33,5 +36,10 @@ adminRouter.delete('/restaurants/:id', deleteRestaurant);
 
 // Food requests
 adminRouter.get('/requests', getAllFoodRequests);
+
+// Food listings management
+adminRouter.get('/food-listings', getAllFoodListings);
+adminRouter.delete('/food-listings/:id', deleteFoodListing);
+adminRouter.put('/food-listings/:id/status', updateFoodListingStatus);
 
 export default adminRouter;
