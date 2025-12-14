@@ -3,6 +3,35 @@ import type { AuthRequest } from '../middleware/auth';
 import type { Response } from 'express';
 import { prisma } from '../db';
 
+// Helper function to convert Buffer to base64
+const convertImageDataToBase64 = (listing: any) => {
+  if (listing.imageData) {
+    // Handle Buffer (Node.js/Bun)
+    if (Buffer.isBuffer(listing.imageData)) {
+      return {
+        ...listing,
+        imageData: listing.imageData.toString('base64'),
+      };
+    }
+    // Handle Uint8Array (alternative format)
+    if (listing.imageData instanceof Uint8Array) {
+      return {
+        ...listing,
+        imageData: Buffer.from(listing.imageData).toString('base64'),
+      };
+    }
+    // Handle if it's already a base64 string
+    if (typeof listing.imageData === 'string') {
+      return listing;
+    }
+  }
+  return listing;
+};
+
+const convertListingsImageData = (listings: any[]) => {
+  return listings.map(convertImageDataToBase64);
+};
+
 export const createFoodListing = async (
   req: AuthRequest,
   res: Response
@@ -89,9 +118,12 @@ export const createFoodListing = async (
       },
     });
 
+    // Convert imageData Buffer to base64 for response
+    const foodListingWithBase64 = convertImageDataToBase64(foodListing);
+
     return successResponse(
       res,
-      foodListing,
+      foodListingWithBase64,
       'Food listing created successfully',
       201
     );
@@ -155,10 +187,13 @@ export const getAllFoodListings = async (
       prisma.foodListing.count({ where }),
     ]);
 
+    // Convert imageData Buffer to base64
+    const foodListingsWithBase64 = convertListingsImageData(foodListings);
+
     return successResponse(
       res,
       {
-        foodListings,
+        foodListings: foodListingsWithBase64,
         pagination: {
           total,
           page: Number(page),
@@ -202,7 +237,10 @@ export const getFoodListing = async (
       return errorResponse(res, 'Food listing not found', 404);
     }
 
-    return successResponse(res, foodListing, 'Food listing fetched successfully');
+    // Convert imageData Buffer to base64
+    const foodListingWithBase64 = convertImageDataToBase64(foodListing);
+
+    return successResponse(res, foodListingWithBase64, 'Food listing fetched successfully');
   } catch (error) {
     console.error('Get food listing error:', error);
     return errorResponse(res, 'Failed to fetch food listing', 500, error);
@@ -363,7 +401,10 @@ export const getMyFoodListings = async (
       },
     });
 
-    return successResponse(res, foodListings, 'Food listings fetched successfully');
+    // Convert imageData Buffer to base64
+    const foodListingsWithBase64 = convertListingsImageData(foodListings);
+
+    return successResponse(res, foodListingsWithBase64, 'Food listings fetched successfully');
   } catch (error) {
     console.error('Get my food listings error:', error);
     return errorResponse(res, 'Failed to fetch food listings', 500, error);
